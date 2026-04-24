@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quantum Physics Visualizer v6</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Outfit:wght@200;300;400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#060810;--surf:#0a0c15;--surf2:#10121e;--border:rgba(255,255,255,0.055);--border2:rgba(255,255,255,0.1);
+  --text:#b8c4e0;--muted:#40475e;--accent:#4fc3f7;
+  --mono:'Share Tech Mono',monospace;--sans:'Outfit',sans-serif;
+  --sh:env(safe-area-inset-bottom,0px);--sw:env(safe-area-inset-right,0px);
+  --panel-w:280px;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);touch-action:none;}
+#app{display:flex;flex-direction:column;width:100%;height:100%;position:relative;}
+#topbar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surf);z-index:10;flex-wrap:wrap;}
+#topbar h1{font-size:13px;font-weight:300;letter-spacing:0.4px;color:#e8eeff;white-space:nowrap;}
+#topbar h1 span{color:var(--accent);font-weight:500;}
+.badge{font-family:var(--mono);font-size:8px;padding:2px 6px;border-radius:100px;white-space:nowrap;}
+.badge-qn{background:rgba(79,195,247,0.1);color:var(--accent);border:1px solid rgba(79,195,247,0.2);}
+.badge-el{background:rgba(124,77,255,0.1);color:#b39ddb;border:1px solid rgba(124,77,255,0.2);}
+#fps{font-family:var(--mono);font-size:8px;background:rgba(0,220,110,0.1);color:#00dc6e;border:1px solid rgba(0,220,110,0.2);padding:2px 6px;border-radius:100px;white-space:nowrap;}
+#btnPause{background:rgba(255,255,255,0.04);border:1px solid var(--border2);color:var(--muted);padding:4px 8px;border-radius:6px;cursor:pointer;font-size:9px;font-family:var(--mono);white-space:nowrap;}
+#btnPause.paused{background:rgba(255,213,79,0.1);border-color:rgba(255,213,79,0.3);color:#ffd54f;}
+#body{display:flex;flex:1;overflow:hidden;position:relative;}
+#canvas-wrap{flex:1;position:relative;overflow:hidden;touch-action:none;}
+canvas{display:block;width:100%!important;height:100%!important;}
+
+/* ── ALWAYS-VISIBLE LEFT PANEL ── */
+#side-panel{
+  width:var(--panel-w);
+  min-width:var(--panel-w);
+  max-width:var(--panel-w);
+  background:var(--surf);
+  border-right:1px solid var(--border2);
+  display:flex;
+  flex-direction:column;
+  flex-shrink:0;
+  overflow:hidden;
+  padding-bottom:calc(8px + var(--sh));
+  z-index:10;
+}
+.panel-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;flex-shrink:0;border-bottom:1px solid var(--border);}
+.panel-title-txt{font-size:11px;font-weight:500;color:#e8eeff;letter-spacing:0.05em;text-transform:uppercase;}
+.panel-tabs{display:flex;gap:4px;padding:8px 10px 0;flex-shrink:0;}
+.stab{flex:1;padding:6px 3px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,0.02);cursor:pointer;font-size:9px;font-family:var(--mono);color:var(--muted);text-align:center;transition:all 0.15s;}
+.stab.active{border-color:rgba(79,195,247,0.4);color:var(--accent);background:rgba(79,195,247,0.08);}
+.panel-body{overflow-y:auto;flex:1;padding:10px 12px;-webkit-overflow-scrolling:touch;}
+.sec-title{font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin:12px 0 8px;}
+.sec-title:first-child{margin-top:0;}
+.ctrl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.ctrl-row label{font-size:10px;color:#7888aa;}
+.ctrl-row .val{font-family:var(--mono);font-size:9px;color:#e8eeff;min-width:38px;text-align:right;}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:rgba(255,255,255,0.07);border-radius:2px;outline:none;margin-bottom:6px;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;border:3px solid rgba(79,195,247,0.35);}
+.divider{height:1px;background:var(--border);margin:10px 0;}
+.btn-row{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;}
+.mmode,.vmode{flex:1;padding:6px 4px;border-radius:7px;border:1px solid var(--border);background:rgba(255,255,255,0.02);cursor:pointer;font-size:9px;font-family:var(--mono);color:var(--muted);text-align:center;transition:all 0.15s;min-width:44px;}
+.mmode.active,.vmode.active{border-color:rgba(79,195,247,0.4);color:var(--accent);background:rgba(79,195,247,0.08);}
+.toggle-btn{display:flex;align-items:center;justify-content:space-between;width:100%;padding:7px 10px;margin-bottom:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:10px;color:#7888aa;font-family:var(--sans);}
+.toggle-btn.active{border-color:rgba(79,195,247,0.3);color:#c8d8f0;background:rgba(79,195,247,0.06);}
+.pill{font-family:var(--mono);font-size:7px;padding:2px 6px;border-radius:100px;background:rgba(255,255,255,0.06);color:var(--muted);}
+.pill.on{background:rgba(79,195,247,0.18);color:var(--accent);}
+#orbInfo{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:var(--mono);font-size:9px;color:#5a6480;line-height:1.9;margin-top:4px;}
+#orbInfo .key{color:#3a4460;}#orbInfo .vi{color:#8899bb;}
+.scale-note{font-family:var(--mono);font-size:8px;color:#2e3650;line-height:1.5;padding:4px 6px;background:rgba(255,255,255,0.015);border-radius:4px;border:1px solid var(--border);margin-top:3px;}
+#btnRegen{width:100%;padding:9px;margin-top:6px;background:rgba(79,195,247,0.08);color:var(--accent);border:1px solid rgba(79,195,247,0.22);border-radius:8px;cursor:pointer;font-size:11px;font-family:var(--sans);}
+#btnRegen:active{background:rgba(79,195,247,0.18);}
+.clip-section{background:rgba(255,255,255,0.015);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:6px;}
+.clip-axis-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.clip-axis-label{font-family:var(--mono);font-size:10px;width:16px;text-align:center;border-radius:4px;padding:2px 3px;}
+.clip-x-label{color:#ff8a80;background:rgba(255,82,82,0.1);}
+.clip-y-label{color:#a5d6a7;background:rgba(76,175,80,0.1);}
+.clip-z-label{color:#90caf9;background:rgba(33,150,243,0.1);}
+.clip-val{font-family:var(--mono);font-size:9px;color:#e8eeff;min-width:30px;text-align:right;}
+.bond-legend{display:flex;gap:8px;padding:6px 8px;background:rgba(255,255,255,0.015);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;flex-wrap:wrap;}
+.bond-legend-item{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:8px;color:#7888aa;}
+.bond-legend-dot{width:9px;height:9px;border-radius:50%;}
+.mode-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:8px;}
+.mode-btn{padding:9px 6px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,0.02);cursor:pointer;font-size:9px;color:var(--muted);text-align:center;transition:all 0.15s;font-family:var(--sans);line-height:1.3;}
+.mode-btn:active{transform:scale(0.97);}
+#btnElement2{border-color:rgba(124,77,255,0.3);color:#b39ddb;}
+#btnCompound2{border-color:rgba(255,213,79,0.25);color:#ffd54f;}
+#btnDecay2{border-color:rgba(255,82,82,0.25);color:#ff8a80;}
+#btnProton2{border-color:rgba(0,230,118,0.25);color:#00e676;}
+#btnNeutron2{border-color:rgba(100,181,246,0.25);color:#64b5f6;}
+#btnNucleus2{border-color:rgba(255,167,38,0.25);color:#ffb74d;}
+#btnU2382{border-color:rgba(255,152,0,0.25);color:#ffb74d;}
+#btnNuclideMap2{border-color:rgba(79,195,247,0.25);color:var(--accent);}
+#status{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:8px;color:var(--muted);pointer-events:none;white-space:nowrap;z-index:5;}
+#hint{position:absolute;top:8px;right:10px;font-family:var(--mono);font-size:7px;color:#1a1e30;text-align:right;line-height:2;pointer-events:none;}
+#loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(6,8,16,0.92);font-family:var(--mono);font-size:12px;color:var(--accent);pointer-events:none;transition:opacity 0.3s;gap:10px;z-index:50;}
+#loading.hidden{opacity:0;pointer-events:none;}
+.load-bar{width:140px;height:2px;background:rgba(255,255,255,0.06);border-radius:1px;overflow:hidden;}
+.load-fill{height:100%;background:var(--accent);border-radius:1px;animation:lp 1.2s ease-in-out infinite;}
+@keyframes lp{0%{width:0}50%{width:75%}100%{width:100%}}
+#legend{position:absolute;top:10px;left:10px;pointer-events:none;}
+#legend-bar{width:10px;height:55px;border-radius:3px;background:linear-gradient(to top,#060810,#4a0080,#9c27b0,#ff9800,#fff);border:1px solid rgba(255,255,255,0.08);}
+.legend-row{display:flex;align-items:flex-start;gap:4px;}
+#legend-labels{display:flex;flex-direction:column;justify-content:space-between;height:55px;font-family:var(--mono);font-size:7px;color:var(--muted);}
+#compLabel{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;color:#ffd54f;pointer-events:none;display:none;text-align:center;white-space:nowrap;background:rgba(6,8,16,0.65);padding:3px 8px;border-radius:4px;border:1px solid rgba(255,213,79,0.15);max-width:75vw;overflow:hidden;text-overflow:ellipsis;}
+#decayHUD{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:8px;color:#ff8a80;pointer-events:none;display:none;text-align:center;background:rgba(6,8,16,0.75);padding:5px 12px;border-radius:5px;border:1px solid rgba(255,82,82,0.2);line-height:1.8;max-width:80vw;}
+#protonHUD,#neutronHUD,#nucleusHUD{position:absolute;top:10px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:8px;pointer-events:none;display:none;text-align:center;background:rgba(6,8,16,0.75);padding:5px 12px;border-radius:5px;line-height:1.8;max-width:80vw;}
+#protonHUD{color:#00e676;border:1px solid rgba(0,230,118,0.25);}
+#neutronHUD{color:#64b5f6;border:1px solid rgba(100,181,246,0.25);}
+#nucleusHUD{color:#ffb74d;border:1px solid rgba(255,152,0,0.25);}
+#tapHint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:7px;color:rgba(79,195,247,0.5);pointer-events:none;white-space:nowrap;z-index:5;letter-spacing:0.06em;}
+#zoom-indicator{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--mono);font-size:14px;color:var(--accent);background:rgba(6,8,16,0.8);padding:8px 16px;border-radius:8px;border:1px solid rgba(79,195,247,0.3);pointer-events:none;opacity:0;transition:opacity 0.3s;z-index:20;}
+#particleTooltip{
+  position:absolute;display:none;
+  background:rgba(4,6,18,0.97);
+  border:1px solid rgba(79,195,247,0.35);
+  border-radius:14px;
+  pointer-events:none;
+  z-index:60;width:240px;
+  backdrop-filter:blur(12px);
+  box-shadow:0 8px 40px rgba(0,0,0,0.8),0 0 0 1px rgba(79,195,247,0.06);
+  overflow:hidden;
+}
+.pt-header-band{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px;border-bottom:1px solid rgba(255,255,255,0.06);background:rgba(79,195,247,0.06);}
+.pt-name{font-family:var(--mono);font-size:12px;font-weight:bold;color:var(--accent);line-height:1.2;}
+.pt-subtitle{font-family:var(--mono);font-size:8px;color:#3a5070;margin-top:2px;}
+.pt-sym-big{font-size:26px;color:#ffd54f;line-height:1;font-family:var(--mono);}
+.pt-desc-row{padding:9px 14px 8px;border-bottom:1px solid rgba(255,255,255,0.05);}
+.pt-desc{font-family:var(--mono);font-size:7.5px;color:#4a6080;line-height:1.65;}
+.pt-stats{display:grid;grid-template-columns:1fr 1fr;gap:0;}
+.pt-stat{padding:8px 14px;border-bottom:1px solid rgba(255,255,255,0.04);}
+.pt-stat:nth-child(odd){border-right:1px solid rgba(255,255,255,0.04);}
+.pt-stat-key{font-family:var(--mono);font-size:7px;color:#28384e;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:3px;}
+.pt-stat-val{font-family:var(--mono);font-size:9px;color:#8899bb;}
+.pt-footer{padding:6px 14px;text-align:center;}
+.pt-footer-txt{font-family:var(--mono);font-size:6.5px;color:#1a2438;letter-spacing:0.05em;}
+.overlay-panel{position:absolute;inset:0;display:none;flex-direction:column;background:rgba(6,8,16,0.97);z-index:60;overflow:hidden;}
+.overlay-panel.open{display:flex;}
+.overlay-close{position:absolute;top:12px;right:14px;background:rgba(255,255,255,0.05);border:1px solid var(--border2);color:var(--muted);cursor:pointer;font-size:16px;padding:6px 10px;border-radius:8px;z-index:5;}
+.modal-bg{position:absolute;inset:0;z-index:70;display:none;align-items:flex-end;justify-content:center;background:rgba(6,8,16,0.88);backdrop-filter:blur(10px);}
+.modal-bg.open{display:flex;}
+.modal-panel{background:var(--surf2);border:1px solid var(--border2);border-radius:20px 20px 0 0;overflow:hidden;display:flex;flex-direction:column;width:100%;max-height:85vh;padding-bottom:calc(8px + var(--sh));}
+.modal-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px;}
+.modal-header h2{font-size:13px;font-weight:400;color:#e8eeff;}
+.btn-close{background:none;border:none;color:var(--muted);cursor:pointer;font-size:18px;padding:4px 6px;}
+#elGrid{overflow-y:auto;padding:10px;display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:4px;-webkit-overflow-scrolling:touch;}
+.el-card{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px 2px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,0.012);text-align:center;}
+.el-card:active{border-color:rgba(124,77,255,0.4);background:rgba(124,77,255,0.07);}
+.el-card.active{border-color:rgba(124,77,255,0.7);background:rgba(124,77,255,0.14);}
+.el-card .z{font-family:var(--mono);font-size:7px;color:var(--muted);}
+.el-card .sym{font-family:var(--mono);font-size:15px;font-weight:bold;color:#ce93d8;line-height:1.1;}
+.el-card .nm{font-size:7px;color:#5a6480;margin-top:1px;}
+.el-card.noble .sym{color:#80deea;}.el-card.alkali .sym{color:#ef9a9a;}.el-card.alkali-earth .sym{color:#ffcc80;}
+.el-card.transition .sym{color:#a5d6a7;}.el-card.post-transition .sym{color:#b0bec5;}.el-card.metalloid .sym{color:#cfd8dc;}
+.el-card.nonmetal .sym{color:#fff176;}.el-card.halogen .sym{color:#f48fb1;}.el-card.lanthanide .sym{color:#ce93d8;}
+.el-card.actinide .sym{color:#ffab91;}.el-card.unknown .sym{color:#90a4ae;}
+.modal-search{background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:8px;padding:6px 10px;font-size:12px;font-family:var(--mono);color:#e8eeff;outline:none;width:140px;}
+.cmp-search-wrap{padding:10px 14px;border-bottom:1px solid var(--border);}
+#cmpInput{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-size:13px;font-family:var(--mono);color:#e8eeff;outline:none;}
+#cmpInput::placeholder{color:var(--muted);}
+.cmp-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;padding:10px 12px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.cmp-card{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,0.018);}
+.cmp-card:active{border-color:rgba(255,213,79,0.4);}
+.cmp-card.active{border-color:rgba(255,213,79,0.7);background:rgba(255,213,79,0.11);}
+.cmp-card.impossible{border-color:rgba(255,82,82,0.3);}
+.cmp-card .cf{font-family:var(--mono);font-size:16px;font-weight:bold;color:#ffd54f;}
+.cmp-card.impossible .cf{color:#ff8a80;}
+.cmp-card .cn{font-size:9px;color:#7888aa;}
+.decay-grid{display:grid;grid-template-columns:1fr;gap:6px;padding:10px 12px;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.decay-card{display:flex;flex-direction:column;gap:4px;padding:10px;border-radius:8px;border:1px solid var(--border);cursor:pointer;background:rgba(255,255,255,0.018);}
+.decay-card:active{border-color:rgba(255,82,82,0.35);}
+.decay-card.active{border-color:rgba(255,82,82,0.7);background:rgba(255,82,82,0.1);}
+.decay-card .dt{font-family:var(--mono);font-size:13px;font-weight:bold;color:#ff8a80;}
+.decay-card .dn{font-size:10px;color:#8899bb;}
+.decay-card .dd{font-size:8px;color:#404f65;line-height:1.5;}
+.decay-card .deq{font-family:var(--mono);font-size:8px;color:#4a6080;margin-top:3px;border-top:1px solid rgba(255,255,255,0.05);padding-top:4px;}
+#nuclideInfo{
+  position:absolute;bottom:0;left:0;right:0;
+  font-family:var(--mono);font-size:9px;color:#c8d8f0;
+  background:rgba(6,8,20,0.95);
+  padding:8px 16px 10px;
+  border-top:1px solid var(--border2);
+  pointer-events:none;text-align:left;
+  line-height:1.8;min-height:52px;
+  display:flex;flex-direction:column;justify-content:center;
+}
+#nuclideInfoMain{font-size:10px;color:#c8d8f0;}
+#nuclideInfoSub{font-size:8px;color:#4a6080;margin-top:2px;}
+#nuclideSearchWrap{position:absolute;top:32px;left:50%;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:rgba(6,8,20,0.92);padding:6px 14px;border-radius:8px;border:1px solid var(--border2);}
+#nuclideSearch{background:rgba(255,255,255,0.05);border:1px solid var(--border2);border-radius:6px;padding:4px 10px;font-size:12px;font-family:var(--mono);color:#e8eeff;outline:none;width:130px;}
+#nuclideHighlight{font-family:var(--mono);font-size:9px;color:var(--accent);}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <h1>Quantum <span>Physics</span> Vis</h1>
+    <span class="badge badge-qn" id="qnLabel">n=1 l=0 m=0</span>
+    <span class="badge badge-el" id="elLabel">H · Hydrogen</span>
+    <button id="btnPause">⏸</button>
+    <span id="fps">-- FPS</span>
+  </div>
+  <div id="body">
+    <!-- ── ALWAYS-VISIBLE LEFT SIDE PANEL ── -->
+    <div id="side-panel">
+      <div class="panel-header">
+        <span class="panel-title-txt">⚛ Controls</span>
+      </div>
+      <div class="panel-tabs">
+        <button class="stab active" data-tab="quantum">QM</button>
+        <button class="stab" data-tab="modes">Modes</button>
+        <button class="stab" data-tab="view">View</button>
+        <button class="stab" data-tab="render">Render</button>
+      </div>
+      <div class="panel-body">
+        <div class="tab-pane" id="tab-quantum">
+          <div class="sec-title">Quantum Numbers</div>
+          <div class="ctrl-row"><label>n (Principal)</label><span class="val" id="vn">1</span></div>
+          <input type="range" id="sn" min="1" max="6" value="1" step="1">
+          <div class="ctrl-row"><label>l (Azimuthal)</label><span class="val" id="vl">0</span></div>
+          <input type="range" id="sl" min="0" max="5" value="0" step="1">
+          <div class="ctrl-row"><label>m (Magnetic)</label><span class="val" id="vm">0</span></div>
+          <input type="range" id="sm" min="-5" max="5" value="0" step="1">
+          <div class="divider"></div>
+          <div class="sec-title">Electron Motion</div>
+          <div class="btn-row">
+            <button class="mmode active" id="mOrbital">Orbital</button>
+            <button class="mmode" id="mBohr">Bohr</button>
+            <button class="mmode" id="mStatic">Static</button>
+          </div>
+          <div class="ctrl-row"><label>Speed</label><span class="val" id="vspd">1.0×</span></div>
+          <input type="range" id="sspd" min="0.1" max="8" value="1.0" step="0.1">
+          <div class="divider"></div>
+          <div class="sec-title">Electron Size</div>
+          <div class="ctrl-row"><label>Size</label><span class="val" id="vElSize">study</span></div>
+          <input type="range" id="sElSize" min="0" max="100" value="33" step="1">
+          <div class="scale-note" id="elSizeNote">Real e⁻ is point-like (&lt;10⁻¹⁸ m).</div>
+          <div id="orbInfo" style="margin-top:8px;">
+            <div><span class="key">Orbital: </span><span class="vi" id="iOrbName">1s</span></div>
+            <div><span class="key">Shell:   </span><span class="vi" id="iShell">K</span></div>
+            <div><span class="key">Energy:  </span><span class="vi" id="iEnergy">-13.6 eV</span></div>
+            <div><span class="key">Zeff(C-R):</span><span class="vi" id="iZeff">1.00</span></div>
+          </div>
+          <button id="btnRegen">↻ Regenerate</button>
+        </div>
+        <div class="tab-pane" id="tab-modes" style="display:none">
+          <div class="sec-title">Select Mode</div>
+          <div class="mode-grid">
+            <button class="mode-btn" id="btnElement2">⚛ Element</button>
+            <button class="mode-btn" id="btnCompound2">⬡ Compound</button>
+            <button class="mode-btn" id="btnDecay2">☢ Decay</button>
+            <button class="mode-btn" id="btnProton2">⚛ Proton</button>
+            <button class="mode-btn" id="btnNeutron2">● Neutron</button>
+            <button class="mode-btn" id="btnNucleus2">⚬ Nucleus</button>
+            <button class="mode-btn" id="btnU2382">⛓ U-238</button>
+            <button class="mode-btn" id="btnNuclideMap2">▦ Nuclide Map</button>
+          </div>
+          <div class="divider"></div>
+          <div class="sec-title">Decay Speed</div>
+          <div class="ctrl-row"><label>Time Dilation</label><span class="val" id="vDecSpd">30×</span></div>
+          <input type="range" id="sDecSpd" min="1" max="200" value="30" step="1">
+        </div>
+        <div class="tab-pane" id="tab-view" style="display:none">
+          <div class="sec-title">Atom Slice</div>
+          <div class="btn-row">
+            <button class="vmode active" id="vFull">Full</button>
+            <button class="vmode" id="vHalf">½</button>
+            <button class="vmode" id="vQuad">¼</button>
+            <button class="vmode" id="vSlab">Slab</button>
+          </div>
+          <div class="ctrl-row"><label>Slice Axis</label><span class="val" id="vaxis">Y</span></div>
+          <input type="range" id="saxis" min="0" max="2" value="1" step="1">
+          <div class="ctrl-row"><label>Slice Depth</label><span class="val" id="vsdepth">0</span></div>
+          <input type="range" id="ssdepth" min="-60" max="60" value="0" step="1">
+          <div class="divider"></div>
+          <div class="sec-title">Clipping Planes</div>
+          <div class="clip-section">
+            <div class="clip-axis-row"><span class="clip-axis-label clip-x-label">X</span><input type="range" id="sxc" min="-60" max="60" value="0" step="1" style="flex:1"><span class="clip-val" id="vxc">off</span></div>
+            <div class="clip-axis-row"><span class="clip-axis-label clip-y-label">Y</span><input type="range" id="syc" min="-60" max="60" value="0" step="1" style="flex:1"><span class="clip-val" id="vyc">off</span></div>
+            <div class="clip-axis-row"><span class="clip-axis-label clip-z-label">Z</span><input type="range" id="szc" min="-60" max="60" value="0" step="1" style="flex:1"><span class="clip-val" id="vzc">off</span></div>
+          </div>
+          <div class="sec-title">Nucleus Scale</div>
+          <div class="ctrl-row"><label>Magnify</label><span class="val" id="vNucScale">real</span></div>
+          <input type="range" id="sNucScale" min="0" max="10000" value="0" step="1">
+          <div class="scale-note" id="scaleNote">Real nucleus:atom ≈ 1:100,000. R=r₀A^⅓.</div>
+          <div class="divider"></div>
+          <div class="sec-title">Display</div>
+          <button class="toggle-btn active" id="btnGrid">Grid <span class="pill on" id="gridPill">ON</span></button>
+          <button class="toggle-btn active" id="btnShowNucleus">Nucleus <span class="pill on" id="nucleusPill">ON</span></button>
+          <button class="toggle-btn active" id="btnBohrRing">Bohr Rings <span class="pill on" id="bohrRingPill">ON</span></button>
+          <div class="divider"></div>
+          <div class="sec-title">Bond Legend</div>
+          <div class="bond-legend">
+            <div class="bond-legend-item"><div class="bond-legend-dot" style="background:#29d0f0;"></div>σ</div>
+            <div class="bond-legend-item"><div class="bond-legend-dot" style="background:#b040f8;"></div>π</div>
+            <div class="bond-legend-item"><div class="bond-legend-dot" style="background:#ffd54f;"></div>ionic</div>
+            <div class="bond-legend-item"><div class="bond-legend-dot" style="background:#ff5050;"></div>anti</div>
+          </div>
+        </div>
+        <div class="tab-pane" id="tab-render" style="display:none">
+          <div class="sec-title">Rendering</div>
+          <div class="ctrl-row"><label>Particles</label><span class="val" id="vpc">80k</span></div>
+          <input type="range" id="spc" min="10000" max="200000" value="80000" step="5000">
+          <div class="ctrl-row"><label>Point Size</label><span class="val" id="vps">1.8</span></div>
+          <input type="range" id="sps" min="0.5" max="5" value="1.8" step="0.1">
+          <div class="divider"></div>
+          <div class="sec-title">Camera</div>
+          <div class="ctrl-row"><label>Zoom</label><span class="val" id="vZoom">1.0×</span></div>
+          <input type="range" id="sZoom" min="10" max="500" value="80" step="1">
+          <button id="btnResetCamera" style="width:100%;padding:8px;margin-top:6px;background:rgba(255,255,255,0.04);color:var(--muted);border:1px solid var(--border2);border-radius:8px;cursor:pointer;font-size:10px;font-family:var(--sans);">Reset Camera</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CANVAS AREA ── -->
+    <div id="canvas-wrap">
+      <canvas id="c"></canvas>
+      <div id="legend"><div class="legend-row"><div id="legend-bar"></div><div id="legend-labels"><span>max</span><span></span><span></span><span></span><span>min</span></div></div></div>
+      <div id="compLabel"></div>
+      <div id="decayHUD"></div>
+      <div id="protonHUD"></div>
+      <div id="neutronHUD"></div>
+      <div id="nucleusHUD"></div>
+      <div id="zoom-indicator">× 1.0</div>
+      <div id="loading"><span>Computing…</span><div class="load-bar"><div class="load-fill"></div></div></div>
+      <div id="status">—</div>
+      <div id="tapHint"></div>
+      <div id="hint">drag·rotate · pinch·zoom · hover·info</div>
+      <div id="particleTooltip">
+        <div class="pt-header-band">
+          <div>
+            <div class="pt-name" id="ptName">—</div>
+            <div class="pt-subtitle" id="ptSubtitle">particle</div>
+          </div>
+          <div class="pt-sym-big" id="ptSym">?</div>
+        </div>
+        <div class="pt-desc-row"><div class="pt-desc" id="ptDesc">—</div></div>
+        <div class="pt-stats">
+          <div class="pt-stat"><div class="pt-stat-key">Charge</div><div class="pt-stat-val" id="ptCharge">—</div></div>
+          <div class="pt-stat"><div class="pt-stat-key">Spin</div><div class="pt-stat-val" id="ptSpin">—</div></div>
+          <div class="pt-stat"><div class="pt-stat-key">Mass</div><div class="pt-stat-val" id="ptMass">—</div></div>
+          <div class="pt-stat"><div class="pt-stat-key">Lifetime</div><div class="pt-stat-val" id="ptLifetime">—</div></div>
+        </div>
+        <div class="pt-footer"><div class="pt-footer-txt">move cursor away to dismiss</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay-panel" id="u238Panel">
+  <button class="overlay-close" id="u238Close">×</button>
+  <canvas id="u238Canvas" style="flex:1;display:block;"></canvas>
+</div>
+<div class="overlay-panel" id="nuclidePanel">
+  <button class="overlay-close" id="nuclideClose">×</button>
+  <canvas id="nuclideCanvas" style="cursor:crosshair;flex:1;display:block;"></canvas>
+  <div id="nuclideSearchWrap">
+    <span style="font-family:var(--mono);font-size:9px;color:var(--muted);">Highlight:</span>
+    <input id="nuclideSearch" placeholder="e.g. H, Fe, U …">
+    <span id="nuclideHighlight"></span>
+  </div>
+  <div id="nuclideInfo">
+    <div id="nuclideInfoMain">Hover over a nuclide to see details · Click to highlight element · AME2020/NUBASE2020</div>
+    <div id="nuclideInfoSub"></div>
+  </div>
+</div>
+<div class="modal-bg" id="elModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h2>Select Element (118)</h2>
+      <input type="text" id="elSearch" class="modal-search" placeholder="Search…">
+      <button class="btn-close" id="btnCloseEl">×</button>
+    </div>
+    <div id="elGrid"></div>
+  </div>
+</div>
+<div class="modal-bg" id="cmpModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h2>⬡ Compound / Molecule</h2>
+      <button class="btn-close" id="btnCloseCmp">×</button>
+    </div>
+    <div class="cmp-search-wrap"><input id="cmpInput" placeholder="Type formula…" autocomplete="off"></div>
+    <div class="cmp-grid" id="cmpGrid"></div>
+  </div>
+</div>
+<div class="modal-bg" id="decayModal">
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h2>☢ Radioactive Decay</h2>
+      <button class="btn-close" id="btnCloseDecay">×</button>
+    </div>
+    <div class="decay-grid" id="decayGrid"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// Panel is always visible — no open/close toggle needed
+document.querySelectorAll('.stab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+    document.querySelectorAll('.tab-pane').forEach(p=>p.style.display='none');
+    document.getElementById('tab-'+btn.dataset.tab).style.display='block';
+  });
+});
+
+// ════ ELEMENTS DB ════
+const ELEMENTS=[
+  {z:1,sym:'H',name:'Hydrogen',cat:'nonmetal',conf:'1s¹',shell:'K',Zeff:1.000},
+  {z:2,sym:'He',name:'Helium',cat:'noble',conf:'1s²',shell:'K',Zeff:1.688},
+  {z:3,sym:'Li',name:'Lithium',cat:'alkali',conf:'[He]2s¹',shell:'L',Zeff:1.279},
+  {z:4,sym:'Be',name:'Beryllium',cat:'alkali-earth',conf:'[He]2s²',shell:'L',Zeff:1.912},
+  {z:5,sym:'B',name:'Boron',cat:'metalloid',conf:'[He]2s²2p¹',shell:'L',Zeff:2.421},
+  {z:6,sym:'C',name:'Carbon',cat:'nonmetal',conf:'[He]2s²2p²',shell:'L',Zeff:3.136},
+  {z:7,sym:'N',name:'Nitrogen',cat:'nonmetal',conf:'[He]2s²2p³',shell:'L',Zeff:3.834},
+  {z:8,sym:'O',name:'Oxygen',cat:'nonmetal',conf:'[He]2s²2p⁴',shell:'L',Zeff:4.453},
+  {z:9,sym:'F',name:'Fluorine',cat:'halogen',conf:'[He]2s²2p⁵',shell:'L',Zeff:5.100},
+  {z:10,sym:'Ne',name:'Neon',cat:'noble',conf:'[He]2s²2p⁶',shell:'L',Zeff:5.758},
+  {z:11,sym:'Na',name:'Sodium',cat:'alkali',conf:'[Ne]3s¹',shell:'M',Zeff:2.507},
+  {z:12,sym:'Mg',name:'Magnesium',cat:'alkali-earth',conf:'[Ne]3s²',shell:'M',Zeff:3.308},
+  {z:13,sym:'Al',name:'Aluminium',cat:'post-transition',conf:'[Ne]3s²3p¹',shell:'M',Zeff:4.066},
+  {z:14,sym:'Si',name:'Silicon',cat:'metalloid',conf:'[Ne]3s²3p²',shell:'M',Zeff:4.285},
+  {z:15,sym:'P',name:'Phosphorus',cat:'nonmetal',conf:'[Ne]3s²3p³',shell:'M',Zeff:4.886},
+  {z:16,sym:'S',name:'Sulfur',cat:'nonmetal',conf:'[Ne]3s²3p⁴',shell:'M',Zeff:5.482},
+  {z:17,sym:'Cl',name:'Chlorine',cat:'halogen',conf:'[Ne]3s²3p⁵',shell:'M',Zeff:6.116},
+  {z:18,sym:'Ar',name:'Argon',cat:'noble',conf:'[Ne]3s²3p⁶',shell:'M',Zeff:6.764},
+  {z:19,sym:'K',name:'Potassium',cat:'alkali',conf:'[Ar]4s¹',shell:'N',Zeff:3.495},
+  {z:20,sym:'Ca',name:'Calcium',cat:'alkali-earth',conf:'[Ar]4s²',shell:'N',Zeff:4.398},
+  {z:26,sym:'Fe',name:'Iron',cat:'transition',conf:'[Ar]3d⁶4s²',shell:'N',Zeff:11.180},
+  {z:29,sym:'Cu',name:'Copper',cat:'transition',conf:'[Ar]3d¹⁰4s¹',shell:'N',Zeff:4.200},
+  {z:47,sym:'Ag',name:'Silver',cat:'transition',conf:'[Kr]4d¹⁰5s¹',shell:'O',Zeff:4.442},
+  {z:79,sym:'Au',name:'Gold',cat:'transition',conf:'[Xe]4f¹⁴5d¹⁰6s¹',shell:'P',Zeff:4.792},
+  {z:82,sym:'Pb',name:'Lead',cat:'post-transition',conf:'[Xe]4f¹⁴5d¹⁰6s²6p²',shell:'P',Zeff:5.832},
+  {z:86,sym:'Rn',name:'Radon',cat:'noble',conf:'[Xe]4f¹⁴5d¹⁰6s²6p⁶',shell:'P',Zeff:7.233},
+  {z:92,sym:'U',name:'Uranium',cat:'actinide',conf:'[Rn]5f³6d¹7s²',shell:'Q',Zeff:3.880},
+  {z:98,sym:'Cf',name:'Californium',cat:'actinide',conf:'[Rn]5f¹⁰7s²',shell:'Q',Zeff:4.400},
+];
+const extraZ=[21,22,23,24,25,27,28,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,80,81,83,84,85,87,88,89,90,91,93,94,95,96,97,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118];
+const extraSym=['Sc','Ti','V','Cr','Mn','Co','Ni','Zn','Ga','Ge','As','Se','Br','Kr','Rb','Sr','Y','Zr','Nb','Mo','Tc','Ru','Rh','Pd','Cd','In','Sn','Sb','Te','I','Xe','Cs','Ba','La','Ce','Pr','Nd','Pm','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Hf','Ta','W','Re','Os','Ir','Pt','Hg','Tl','Bi','Po','At','Fr','Ra','Ac','Th','Pa','Np','Pu','Am','Cm','Bk','Es','Fm','Md','No','Lr','Rf','Db','Sg','Bh','Hs','Mt','Ds','Rg','Cn','Nh','Fl','Mc','Lv','Ts','Og'];
+const extraNames=['Scandium','Titanium','Vanadium','Chromium','Manganese','Cobalt','Nickel','Zinc','Gallium','Germanium','Arsenic','Selenium','Bromine','Krypton','Rubidium','Strontium','Yttrium','Zirconium','Niobium','Molybdenum','Technetium','Ruthenium','Rhodium','Palladium','Cadmium','Indium','Tin','Antimony','Tellurium','Iodine','Xenon','Caesium','Barium','Lanthanum','Cerium','Praseodymium','Neodymium','Promethium','Samarium','Europium','Gadolinium','Terbium','Dysprosium','Holmium','Erbium','Thulium','Ytterbium','Lutetium','Hafnium','Tantalum','Tungsten','Rhenium','Osmium','Iridium','Platinum','Mercury','Thallium','Bismuth','Polonium','Astatine','Francium','Radium','Actinium','Thorium','Protactinium','Neptunium','Plutonium','Americium','Curium','Berkelium','Einsteinium','Fermium','Mendelevium','Nobelium','Lawrencium','Rutherfordium','Dubnium','Seaborgium','Bohrium','Hassium','Meitnerium','Darmstadtium','Roentgenium','Copernicium','Nihonium','Flerovium','Moscovium','Livermorium','Tennessine','Oganesson'];
+const extraCat={'Sc':'transition','Ti':'transition','V':'transition','Cr':'transition','Mn':'transition','Co':'transition','Ni':'transition','Zn':'transition','Ga':'post-transition','Ge':'metalloid','As':'metalloid','Se':'nonmetal','Br':'halogen','Kr':'noble','Rb':'alkali','Sr':'alkali-earth','Y':'transition','Zr':'transition','Nb':'transition','Mo':'transition','Tc':'transition','Ru':'transition','Rh':'transition','Pd':'transition','Cd':'transition','In':'post-transition','Sn':'post-transition','Sb':'metalloid','Te':'metalloid','I':'halogen','Xe':'noble','Cs':'alkali','Ba':'alkali-earth','La':'lanthanide','Ce':'lanthanide','Pr':'lanthanide','Nd':'lanthanide','Pm':'lanthanide','Sm':'lanthanide','Eu':'lanthanide','Gd':'lanthanide','Tb':'lanthanide','Dy':'lanthanide','Ho':'lanthanide','Er':'lanthanide','Tm':'lanthanide','Yb':'lanthanide','Lu':'lanthanide','Hf':'transition','Ta':'transition','W':'transition','Re':'transition','Os':'transition','Ir':'transition','Pt':'transition','Hg':'transition','Tl':'post-transition','Bi':'post-transition','Po':'post-transition','At':'halogen','Fr':'alkali','Ra':'alkali-earth','Ac':'actinide','Th':'actinide','Pa':'actinide','Np':'actinide','Pu':'actinide','Am':'actinide','Cm':'actinide','Bk':'actinide','Es':'actinide','Fm':'actinide','Md':'actinide','No':'actinide','Lr':'actinide'};
+const shells=['','K','L','M','N','O','P','Q'];
+extraZ.forEach((z,i)=>{
+  if(!ELEMENTS.find(e=>e.z===z)){
+    const sym=extraSym[i]||'??';const name=extraNames[i]||sym;const cat=extraCat[sym]||'unknown';
+    const n=z<=10?1:z<=18?2:z<=36?4:z<=54?5:z<=86?6:7;
+    ELEMENTS.push({z,sym,name,cat,conf:`[core]${z}`,shell:shells[n]||'Q',Zeff:Math.max(1,z*0.1+1)});
+  }
+});
+ELEMENTS.sort((a,b)=>a.z-b.z);
+function outerOrbital(el){const sN={'K':1,'L':2,'M':3,'N':4,'O':5,'P':6,'Q':7};const n=sN[el.shell]||1;let l=0;const c=el.conf||'';if(c.includes('f'))l=3;else if(c.includes('d'))l=2;else if(c.includes('p'))l=1;return{n,l,m:0};}
+
+const CMP_DB={
+  'H2':{name:'Hydrogen',possible:true,label:'H₂ · σ(1s)² · bond order 1 · 0.74 Å · Nonpolar covalent',
+    atoms:[{sym:'H',pos:[-7,0,0],Z:1,c:[0.9,0.9,1]},{sym:'H',pos:[7,0,0],Z:1,c:[0.9,0.9,1]}],
+    bonds:[[0,1,'sigma']],lonePairs:[]},
+  'O2':{name:'Oxygen',possible:true,label:'O₂ · π*² unpaired · paramagnetic · bond order 2 · 1.21 Å',
+    atoms:[{sym:'O',pos:[-12,0,0],Z:8,c:[1,0.25,0.15]},{sym:'O',pos:[12,0,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'double']],lonePairs:[[20,0,0,1,0.3,0.1],[-20,0,0,1,0.3,0.1]]},
+  'N2':{name:'Nitrogen',possible:true,label:'N₂ · triple bond · bond order 3 · 1.10 Å · Very strong',
+    atoms:[{sym:'N',pos:[-9,0,0],Z:7,c:[0.5,0.65,1]},{sym:'N',pos:[9,0,0],Z:7,c:[0.5,0.65,1]}],
+    bonds:[[0,1,'triple']],lonePairs:[[17,0,0,0.5,0.65,1],[-17,0,0,0.5,0.65,1]]},
+  'Cl2':{name:'Chlorine',possible:true,label:'Cl₂ · σ(3p)² · bond order 1 · 1.99 Å · Yellow-green gas',
+    atoms:[{sym:'Cl',pos:[-14,0,0],Z:17,c:[0.5,1,0.5]},{sym:'Cl',pos:[14,0,0],Z:17,c:[0.5,1,0.5]}],
+    bonds:[[0,1,'sigma']],lonePairs:[[24,0,0,0.4,0.9,0.4],[-24,0,0,0.4,0.9,0.4],[24,0,5,0.4,0.9,0.4],[-24,0,5,0.4,0.9,0.4]]},
+  'F2':{name:'Fluorine',possible:true,label:'F₂ · weakest halogen bond · bond order 1 · 1.41 Å',
+    atoms:[{sym:'F',pos:[-10,0,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[10,0,0],Z:9,c:[0.95,0.7,0.9]}],
+    bonds:[[0,1,'sigma']],lonePairs:[]},
+  'H2O':{name:'Water',possible:true,label:'H₂O · sp³ · 104.5° · polar · 2 lone pairs · μ=1.85 D',
+    atoms:[{sym:'O',pos:[0,0,0],Z:8,c:[1,0.25,0.15]},{sym:'H',pos:[12.6*0.789,12.6*0.615,0],Z:1,c:[0.7,0.85,1]},{sym:'H',pos:[-12.6*0.789,12.6*0.615,0],Z:1,c:[0.7,0.85,1]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma']],lonePairs:[[0,-9,5,0.9,0.9,0.3],[0,-9,-5,0.9,0.9,0.3]]},
+  'H2S':{name:'Hydrogen Sulfide',possible:true,label:'H₂S · sp³ · 92.3° · rotten-egg smell · toxic · μ=0.97 D',
+    atoms:[{sym:'S',pos:[0,0,0],Z:16,c:[1,0.95,0.3]},{sym:'H',pos:[14,8,0],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[-14,8,0],Z:1,c:[0.85,0.85,0.85]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma']],lonePairs:[[0,-10,5,1,0.95,0.3],[0,-10,-5,1,0.95,0.3]]},
+  'HF':{name:'Hydrogen Fluoride',possible:true,label:'HF · strongly polar · μ=1.91 D · H-bond donor · 0.92 Å',
+    atoms:[{sym:'H',pos:[-8,0,0],Z:1,c:[0.9,0.9,1]},{sym:'F',pos:[9,0,0],Z:9,c:[0.95,0.7,0.9]}],
+    bonds:[[0,1,'sigma']],lonePairs:[[18,0,5,0.95,0.7,0.9],[18,0,-5,0.95,0.7,0.9]]},
+  'HCl':{name:'Hydrogen Chloride',possible:true,label:'HCl · polar covalent · μ=1.08 D · strong acid in water',
+    atoms:[{sym:'H',pos:[-8,0,0],Z:1,c:[0.9,0.9,1]},{sym:'Cl',pos:[12,0,0],Z:17,c:[0.5,1,0.5]}],
+    bonds:[[0,1,'sigma']],lonePairs:[[22,0,0,0.4,0.9,0.4]]},
+  'CO2':{name:'Carbon Dioxide',possible:true,label:'CO₂ · sp · 180° · delocalized π · non-polar · greenhouse gas',
+    atoms:[{sym:'C',pos:[0,0,0],Z:6,c:[0.75,0.75,0.75]},{sym:'O',pos:[18,0,0],Z:8,c:[1,0.25,0.15]},{sym:'O',pos:[-18,0,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'double'],[0,2,'double']],lonePairs:[[26,0,0,1,0.3,0.1],[-26,0,0,1,0.3,0.1]]},
+  'CO':{name:'Carbon Monoxide',possible:true,label:'CO · triple bond · bond order 3 · isoelectronic with N₂ · toxic',
+    atoms:[{sym:'C',pos:[-8,0,0],Z:6,c:[0.75,0.75,0.75]},{sym:'O',pos:[8,0,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'triple']],lonePairs:[[-15,0,0,0.7,0.7,0.7],[15,0,0,1,0.3,0.1]]},
+  'CH4':{name:'Methane',possible:true,label:'CH₄ · sp³ · 109.5° · tetrahedral · nonpolar · natural gas',
+    atoms:[{sym:'C',pos:[0,0,0],Z:6,c:[0.75,0.75,0.75]},{sym:'H',pos:[12,12,12],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[-12,-12,12],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[-12,12,-12],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[12,-12,-12],Z:1,c:[0.85,0.85,0.85]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma'],[0,3,'sigma'],[0,4,'sigma']],lonePairs:[]},
+  'C2H4':{name:'Ethylene',possible:true,label:'C₂H₄ · sp² · planar · π bond · 120° · double bond 1.34 Å',
+    atoms:[{sym:'C',pos:[-9,0,0],Z:6,c:[0.75,0.75,0.75]},{sym:'C',pos:[9,0,0],Z:6,c:[0.75,0.75,0.75]},{sym:'H',pos:[-16,11,0],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[-16,-11,0],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[16,11,0],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[16,-11,0],Z:1,c:[0.85,0.85,0.85]}],
+    bonds:[[0,1,'double'],[0,2,'sigma'],[0,3,'sigma'],[1,4,'sigma'],[1,5,'sigma']],lonePairs:[]},
+  'C2H2':{name:'Acetylene',possible:true,label:'C₂H₂ · sp · linear · triple bond · 1.20 Å · fuel gas',
+    atoms:[{sym:'H',pos:[-24,0,0],Z:1,c:[0.85,0.85,0.85]},{sym:'C',pos:[-12,0,0],Z:6,c:[0.75,0.75,0.75]},{sym:'C',pos:[12,0,0],Z:6,c:[0.75,0.75,0.75]},{sym:'H',pos:[24,0,0],Z:1,c:[0.85,0.85,0.85]}],
+    bonds:[[0,1,'sigma'],[1,2,'triple'],[2,3,'sigma']],lonePairs:[]},
+  'C6H6':{name:'Benzene',possible:true,label:'C₆H₆ · aromatic · π delocalized · 120° · all bonds 1.40 Å',
+    atoms:(()=>{const a=[];for(let i=0;i<6;i++){const ang=i*Math.PI/3;a.push({sym:'C',pos:[Math.cos(ang)*14,Math.sin(ang)*14,0],Z:6,c:[0.75,0.75,0.75]});}for(let i=0;i<6;i++){const ang=i*Math.PI/3;a.push({sym:'H',pos:[Math.cos(ang)*24,Math.sin(ang)*24,0],Z:1,c:[0.85,0.85,0.85]});}return a;})(),
+    bonds:(()=>{const b=[];for(let i=0;i<6;i++)b.push([i,(i+1)%6,'aromatic']);for(let i=0;i<6;i++)b.push([i,i+6,'sigma']);return b;})(),lonePairs:[]},
+  'NH3':{name:'Ammonia',possible:true,label:'NH₃ · sp³ · 107° · trigonal pyramidal · μ=1.47 D',
+    atoms:[{sym:'N',pos:[0,4,0],Z:7,c:[0.5,0.65,1]},{sym:'H',pos:[15,-4,0],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[-7.5,-4,13],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[-7.5,-4,-13],Z:1,c:[0.85,0.85,0.85]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma'],[0,3,'sigma']],lonePairs:[[0,17,0,0.9,0.9,0.3]]},
+  'NO':{name:'Nitric Oxide',possible:true,label:'NO · odd electron · radical · bond order 2.5 · paramagnetic',
+    atoms:[{sym:'N',pos:[-8,0,0],Z:7,c:[0.5,0.65,1]},{sym:'O',pos:[8,0,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'double']],lonePairs:[[-15,0,0,0.5,0.65,1]]},
+  'NO2':{name:'Nitrogen Dioxide',possible:true,label:'NO₂ · odd electron radical · 134.1° · paramagnetic · brown gas',
+    atoms:[{sym:'N',pos:[0,0,0],Z:7,c:[0.5,0.65,1]},{sym:'O',pos:[14*0.788,14*0.616,0],Z:8,c:[1,0.25,0.15]},{sym:'O',pos:[-14*0.788,14*0.616,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'double'],[0,2,'double']],lonePairs:[[0,-8,0,0.5,0.65,1]]},
+  'N2O':{name:'Nitrous Oxide',possible:true,label:'N₂O · linear · resonance · N≡N–O ↔ N=N=O · laughing gas',
+    atoms:[{sym:'N',pos:[-12,0,0],Z:7,c:[0.5,0.65,1]},{sym:'N',pos:[0,0,0],Z:7,c:[0.6,0.75,1]},{sym:'O',pos:[12,0,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'double'],[1,2,'double']],lonePairs:[[-20,0,0,0.5,0.65,1]]},
+  'O3':{name:'Ozone',possible:true,label:'O₃ · bent · 117° · resonance · radical character · UV shield',
+    atoms:[{sym:'O',pos:[0,5,0],Z:8,c:[0.3,0.7,1]},{sym:'O',pos:[-13,-5,0],Z:8,c:[1,0.25,0.15]},{sym:'O',pos:[13,-5,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'double'],[0,2,'sigma']],lonePairs:[[0,14,0,0.3,0.7,1]]},
+  'NaCl':{name:'Sodium Chloride',possible:true,label:'NaCl · ionic · Na⁺ Cl⁻ · electrostatic · 2.36 Å · table salt',
+    atoms:[{sym:'Na',pos:[-12,0,0],Z:11,c:[0.9,0.7,0.3]},{sym:'Cl',pos:[12,0,0],Z:17,c:[0.5,0.9,0.5]}],
+    bonds:[[0,1,'ionic']],lonePairs:[[21,0,0,0.5,0.9,0.5]]},
+  'MgO':{name:'Magnesium Oxide',possible:true,label:'MgO · ionic · Mg²⁺O²⁻ · ceramic · mp 2852°C · antacid',
+    atoms:[{sym:'Mg',pos:[-11,0,0],Z:12,c:[0.7,0.9,0.7]},{sym:'O',pos:[11,0,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'ionic']],lonePairs:[]},
+  'CaF2':{name:'Calcium Fluoride',possible:true,label:'CaF₂ · ionic · Ca²⁺ 2F⁻ · fluorite structure · optical windows',
+    atoms:[{sym:'Ca',pos:[0,0,0],Z:20,c:[0.8,0.8,0.5]},{sym:'F',pos:[-15,0,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[15,0,0],Z:9,c:[0.95,0.7,0.9]}],
+    bonds:[[0,1,'ionic'],[0,2,'ionic']],lonePairs:[]},
+  'PH3':{name:'Phosphine',possible:true,label:'PH₃ · sp³ · 93.5° · trigonal pyramidal · toxic · flammable',
+    atoms:[{sym:'P',pos:[0,3,0],Z:15,c:[1,0.6,0.2]},{sym:'H',pos:[14,-4,0],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[-7,-4,12],Z:1,c:[0.85,0.85,0.85]},{sym:'H',pos:[-7,-4,-12],Z:1,c:[0.85,0.85,0.85]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma'],[0,3,'sigma']],lonePairs:[[0,16,0,1,0.6,0.2]]},
+  'SF6':{name:'Sulfur Hexafluoride',possible:true,label:'SF₆ · sp³d² · octahedral · 90° · non-toxic · insulator',
+    atoms:[{sym:'S',pos:[0,0,0],Z:16,c:[1,0.95,0.3]},{sym:'F',pos:[16,0,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[-16,0,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[0,16,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[0,-16,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[0,0,16],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[0,0,-16],Z:9,c:[0.95,0.7,0.9]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma'],[0,3,'sigma'],[0,4,'sigma'],[0,5,'sigma'],[0,6,'sigma']],lonePairs:[]},
+  'HeH2':{name:'Helium Dihydride',possible:false,label:'HeH₂ IMPOSSIBLE — He has no available bonding orbitals (filled 1s²)',
+    atoms:[{sym:'He',pos:[0,0,0],Z:2,c:[0.5,0.9,0.9]},{sym:'H',pos:[12,0,0],Z:1,c:[0.9,0.9,1]},{sym:'H',pos:[-12,0,0],Z:1,c:[0.9,0.9,1]}],
+    bonds:[[0,1,'antibonding'],[0,2,'antibonding']],lonePairs:[]},
+  'Ne2':{name:'Dineon',possible:false,label:'Ne₂ UNSTABLE — noble gas, zero bond order, purely repulsive (σ*=σ)',
+    atoms:[{sym:'Ne',pos:[-12,0,0],Z:10,c:[0.5,0.9,0.9]},{sym:'Ne',pos:[12,0,0],Z:10,c:[0.5,0.9,0.9]}],
+    bonds:[[0,1,'antibonding']],lonePairs:[]},
+  'H3':{name:'Trihydrogen',possible:false,label:'H₃ linear IMPOSSIBLE — violates electron pairing; H₃⁺ triangle IS stable (ions)',
+    atoms:[{sym:'H',pos:[-12,0,0],Z:1,c:[0.9,0.9,1]},{sym:'H',pos:[0,0,0],Z:1,c:[0.7,0.7,0.9]},{sym:'H',pos:[12,0,0],Z:1,c:[0.9,0.9,1]}],
+    bonds:[[0,1,'antibonding'],[1,2,'antibonding']],lonePairs:[]},
+  'OF2':{name:'Oxygen Difluoride',possible:true,label:'OF₂ · sp³ · 103.2° · O has +2 oxidation state · highly reactive',
+    atoms:[{sym:'O',pos:[0,0,0],Z:8,c:[1,0.25,0.15]},{sym:'F',pos:[13,10,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[-13,10,0],Z:9,c:[0.95,0.7,0.9]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma']],lonePairs:[[0,-10,5,1,0.25,0.15],[0,-10,-5,1,0.25,0.15]]},
+  'ClF3':{name:'Chlorine Trifluoride',possible:true,label:'ClF3 · sp³d · T-shaped · 87.5° · extremely reactive oxidizer',
+    atoms:[{sym:'Cl',pos:[0,0,0],Z:17,c:[0.5,1,0.5]},{sym:'F',pos:[14,0,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[-14,0,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[0,16,0],Z:9,c:[0.95,0.7,0.9]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma'],[0,3,'sigma']],lonePairs:[[0,-12,5,0.4,0.9,0.4],[0,-12,-5,0.4,0.9,0.4]]},
+  'XeF4':{name:'Xenon Tetrafluoride',possible:true,label:'XeF₄ · sp³d² · square planar · noble gas compound (1962)',
+    atoms:[{sym:'Xe',pos:[0,0,0],Z:54,c:[0.6,0.8,0.9]},{sym:'F',pos:[16,0,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[-16,0,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[0,16,0],Z:9,c:[0.95,0.7,0.9]},{sym:'F',pos:[0,-16,0],Z:9,c:[0.95,0.7,0.9]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma'],[0,3,'sigma'],[0,4,'sigma']],lonePairs:[[0,0,12,0.6,0.8,0.9],[0,0,-12,0.6,0.8,0.9]]},
+  'SO2':{name:'Sulfur Dioxide',possible:true,label:'SO₂ · bent · 119° · resonance · μ=1.63 D · acid rain precursor',
+    atoms:[{sym:'S',pos:[0,0,0],Z:16,c:[1,0.95,0.3]},{sym:'O',pos:[14,10,0],Z:8,c:[1,0.25,0.15]},{sym:'O',pos:[-14,10,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'double'],[0,2,'sigma']],lonePairs:[[0,-10,0,1,0.95,0.3]]},
+  'SO3':{name:'Sulfur Trioxide',possible:true,label:'SO₃ · trigonal planar · sp² · 120° · forms H₂SO₄ with water',
+    atoms:[{sym:'S',pos:[0,0,0],Z:16,c:[1,0.95,0.3]},{sym:'O',pos:[16,0,0],Z:8,c:[1,0.25,0.15]},{sym:'O',pos:[-8,14,0],Z:8,c:[1,0.25,0.15]},{sym:'O',pos:[-8,-14,0],Z:8,c:[1,0.25,0.15]}],
+    bonds:[[0,1,'double'],[0,2,'double'],[0,3,'sigma']],lonePairs:[]},
+  'PCl5':{name:'Phosphorus Pentachloride',possible:true,label:'PCl₅ · sp³d · trigonal bipyramidal · 90°/120° · reactive Lewis acid',
+    atoms:[{sym:'P',pos:[0,0,0],Z:15,c:[1,0.6,0.2]},{sym:'Cl',pos:[16,0,0],Z:17,c:[0.5,1,0.5]},{sym:'Cl',pos:[-8,14,0],Z:17,c:[0.5,1,0.5]},{sym:'Cl',pos:[-8,-14,0],Z:17,c:[0.5,1,0.5]},{sym:'Cl',pos:[0,0,16],Z:17,c:[0.5,1,0.5]},{sym:'Cl',pos:[0,0,-16],Z:17,c:[0.5,1,0.5]}],
+    bonds:[[0,1,'sigma'],[0,2,'sigma'],[0,3,'sigma'],[0,4,'sigma'],[0,5,'sigma']],lonePairs:[]},
+};
+const PRESET_CMPS=Object.keys(CMP_DB);
+
+const PARTICLE_INFO={
+  'α':{name:'Alpha Particle',sym:'⁴He²⁺',subtitle:'helium-4 nucleus',charge:'+2e',spin:'0',mass:'3727.38 MeV/c²',lifetime:'stable',color:[1,0.5,0.1],desc:'Helium-4 nucleus emitted via quantum tunneling through Coulomb barrier. Kinetic energy ~5–9 MeV. Stopped by a sheet of paper.'},
+  'e⁻':{name:'Electron',sym:'e⁻',subtitle:'fundamental lepton (β⁻ product)',charge:'−1e',spin:'½ ℏ',mass:'0.511 MeV/c²',lifetime:'stable',color:[0.3,0.6,1],desc:'Created when the virtual W⁻ boson decays. Energy spectrum continuous up to Q-value.'},
+  'e⁺':{name:'Positron',sym:'e⁺',subtitle:'antielectron (β⁺ product)',charge:'+1e',spin:'½ ℏ',mass:'0.511 MeV/c²',lifetime:'~ns → 2γ',color:[0.3,1,0.5],desc:'Created when the virtual W⁺ boson decays. Annihilates with electrons producing two 511 keV gamma photons.'},
+  'ν̄ₑ':{name:'Electron Antineutrino',sym:'ν̄ₑ',subtitle:'antimatter lepton (β⁻ decay)',charge:'0',spin:'½ ℏ',mass:'<0.8 eV/c² (KATRIN 2022)',lifetime:'stable',color:[0.7,0.9,0.4],desc:'Emitted together with the electron in β⁻ decay to conserve lepton number. Rarely interacts with matter.'},
+  'νₑ':{name:'Electron Neutrino',sym:'νₑ',subtitle:'lepton (β⁺ decay)',charge:'0',spin:'½ ℏ',mass:'<0.8 eV/c² (KATRIN 2022)',lifetime:'stable',color:[0.7,0.9,0.5],desc:'Created with the positron in β⁺ decay. Non-zero mass proved by neutrino oscillation (Nobel 2015).'},
+  'γ':{name:'Gamma Photon',sym:'γ',subtitle:'massless gauge boson',charge:'0',spin:'1 ℏ',mass:'0 (massless)',lifetime:'massless',color:[1,1,0.3],desc:'High-energy EM radiation from nuclear de-excitation. Typical energy 10 keV–10 MeV.'},
+  'W⁻':{name:'W⁻ Boson (virtual)',sym:'W⁻',subtitle:'weak force carrier · d→u quark',charge:'−1e',spin:'1 ℏ',mass:'80.377 GeV/c² (PDG 2023)',lifetime:'3.15×10⁻²⁵ s (off-shell)',color:[0.8,0.4,1],desc:'Virtual W⁻ emitted when a down quark converts to an up quark inside the neutron. Decays into e⁻ + ν̄ₑ.'},
+  'W⁺':{name:'W⁺ Boson (virtual)',sym:'W⁺',subtitle:'weak force carrier · u→d quark',charge:'+1e',spin:'1 ℏ',mass:'80.377 GeV/c² (PDG 2023)',lifetime:'3.15×10⁻²⁵ s (off-shell)',color:[0.9,0.5,1],desc:'Virtual W⁺ emitted when an up quark converts to a down quark. Decays into e⁺ + νₑ.'},
+  'n':{name:'Prompt Fission Neutron',sym:'n⁰',subtitle:'fission product',charge:'0',spin:'½ ℏ',mass:'939.565 MeV/c²',lifetime:'878.4 s (free)',color:[0.7,0.7,0.7],desc:'Ejected in fission with mean KE ~2 MeV. Free neutron decays via β⁻: n→p+e⁻+ν̄ₑ.'},
+  'u':{name:'Up Quark',sym:'u',subtitle:'valence quark · +⅔ charge',charge:'+⅔ e',spin:'½ ℏ',mass:'2.16 MeV/c² (MS-bar)',lifetime:'stable (confined)',color:[1,0.15,0.1],desc:'Two up quarks + one down quark = proton (uud). Color-confined. Dot color shows its QCD color charge (R/G/B).'},
+  'd':{name:'Down Quark',sym:'d',subtitle:'valence quark · −⅓ charge',charge:'−⅓ e',spin:'½ ℏ',mass:'4.67 MeV/c² (MS-bar)',lifetime:'stable (confined)',color:[0.15,0.25,1],desc:'One up quark + two down quarks = neutron (udd). Converts to up quark in β⁻ decay via virtual W⁻.'},
+  'g':{name:'Gluon',sym:'g',subtitle:'strong force carrier (QCD)',charge:'0',spin:'1 ℏ',mass:'0 (massless)',lifetime:'~10⁻²³ s (confined)',color:[0.2,1,0.5],desc:'Mediator of the strong nuclear force. 8 color-anticolor types. Self-interacting — responsible for quark confinement.'},
+  'sea-u':{name:'Sea Quark (ū/d̄)',sym:'q̄',subtitle:'virtual quark-antiquark pair',charge:'varies',spin:'½ ℏ',mass:'virtual (~0)',lifetime:'<10⁻²⁴ s',color:[1,0.6,0.5],desc:'Virtual qq̄ pair produced by gluon splitting. Contributes to nucleon sea structure (Bjorken scaling deviation).'},
+  'pi0':{name:'Neutral Pion',sym:'π⁰',subtitle:'lightest meson · qq̄ bound state',charge:'0',spin:'0',mass:'134.977 MeV/c² (PDG)',lifetime:'8.52×10⁻¹⁷ s → 2γ',color:[0.8,0.8,0.2],desc:'Mediates residual nuclear force between nucleons (Yukawa, 1935). Decays almost instantly to two gamma rays via electromagnetic interaction.'},
+  'pip':{name:'Charged Pion',sym:'π⁺',subtitle:'meson · ud̄ bound state',charge:'+1e',spin:'0',mass:'139.570 MeV/c²',lifetime:'2.603×10⁻⁸ s → μ⁺νμ',color:[0.9,0.6,0.1],desc:'Charged pion: lightest charged meson. Mediates nuclear force at medium range (1–2 fm). Decays to muon + muon neutrino.'},
+  'pim':{name:'Charged Pion',sym:'π⁻',subtitle:'meson · ūd bound state',charge:'−1e',spin:'0',mass:'139.570 MeV/c²',lifetime:'2.603×10⁻⁸ s → μ⁻ν̄μ',color:[0.6,0.3,0.9],desc:'Anti-pion: ūd bound state. Mediates nn and pp nuclear attractive force at range ~1.4 fm.'},
+  'rho':{name:'Rho Meson',sym:'ρ',subtitle:'vector meson · short-range nuclear force',charge:'0/±1',spin:'1 ℏ',mass:'775.11 MeV/c² (PDG)',lifetime:'~4.5×10⁻²⁴ s → ππ',color:[1,0.4,0.8],desc:'Vector meson mediating short-range (0.25–0.5 fm) repulsive nuclear force. Discovered 1961 at Berkeley Bevatron.'},
+  'omega':{name:'Omega Meson',sym:'ω',subtitle:'vector meson · nuclear repulsion',charge:'0',spin:'1 ℏ',mass:'782.65 MeV/c²',lifetime:'7.75×10⁻²³ s → π⁰γ',color:[0.5,0.9,0.9],desc:'Isoscalar vector meson contributing to medium-range nuclear attraction and short-range repulsion in Walecka model.'},
+  'sigma':{name:'Sigma Meson (f₀)',sym:'σ/f₀',subtitle:'scalar meson · medium-range attraction',charge:'0',spin:'0',mass:'400–550 MeV/c² (PDG)',lifetime:'~10⁻²³ s → ππ',color:[0.6,0.8,0.4],desc:'Controversial scalar meson (f₀(500)/σ). Responsible for intermediate-range (1–2 fm) nuclear attraction in modern Yukawa theory. Confirmed in PDG 2012.'},
+  'Υ':{name:'Daughter Nucleus',sym:'ᴬY',subtitle:'recoiling product nucleus',charge:'varies',spin:'varies',mass:'varies',lifetime:'varies',color:[0.3,0.8,1],desc:'Product nucleus after radioactive decay. α: Z−2, A−4. β⁻: Z+1. β⁺: Z−1. γ: Z,A unchanged.'},
+  'frag':{name:'Fission Fragment',sym:'ᴬY',subtitle:'heavy fission product',charge:'+high',spin:'varies',mass:'~100 u',lifetime:'varies',color:[0.3,0.8,1],desc:'One of two heavy daughter nuclei from fission. Highly excited — emits neutrons then undergoes β⁻ decay chains.'},
+};
+
+const DECAY_TYPES=[
+  {id:'alpha',name:'Alpha (α) Decay',color:[1,0.3,0.1],desc:'Heavy nucleus tunnels α through Coulomb barrier. Q: 4–9 MeV.',eq:'ᴬ_ZX → ᴬ⁻⁴_(Z-2)Y + ⁴₂α',parentZ:92,parentA:238,parentSym:'²³⁸U',daughterZ:90,daughterA:234,daughterSym:'²³⁴Th',particles:[{key:'α',born:0,vscale:1.0,angle:Math.PI*0.3,shortLived:false},{key:'Υ',born:0,vscale:0.25,angle:Math.PI*1.3,shortLived:false}]},
+  {id:'beta_minus',name:'Beta⁻ (β⁻) Decay',color:[0.3,0.6,1],desc:'d→u quark via virtual W⁻. W⁻ → e⁻ + ν̄ₑ. Z+1, A unchanged.',eq:'n → p + W⁻* → p + e⁻ + ν̄ₑ',parentZ:6,parentA:14,parentSym:'¹⁴C',daughterZ:7,daughterA:14,daughterSym:'¹⁴N',particles:[{key:'W⁻',born:0,vscale:0.05,angle:Math.PI*0.45,shortLived:true,isBoson:true},{key:'Υ',born:0,vscale:0.22,angle:Math.PI*1.4,shortLived:false},{key:'e⁻',born:1,vscale:1.1,angle:Math.PI*0.25,shortLived:false,fromBoson:true},{key:'ν̄ₑ',born:1,vscale:1.3,angle:Math.PI*0.65,shortLived:false,fromBoson:true}]},
+  {id:'beta_plus',name:'Beta⁺ (β⁺) Decay',color:[0.3,1,0.5],desc:'u→d quark via virtual W⁺. W⁺ → e⁺ + νₑ. Z−1, A unchanged.',eq:'p → n + W⁺* → n + e⁺ + νₑ',parentZ:11,parentA:22,parentSym:'²²Na',daughterZ:10,daughterA:22,daughterSym:'²²Ne',particles:[{key:'W⁺',born:0,vscale:0.05,angle:Math.PI*0.50,shortLived:true,isBoson:true},{key:'Υ',born:0,vscale:0.22,angle:Math.PI*1.5,shortLived:false},{key:'e⁺',born:1,vscale:1.1,angle:Math.PI*0.30,shortLived:false,fromBoson:true},{key:'νₑ',born:1,vscale:1.2,angle:Math.PI*0.70,shortLived:false,fromBoson:true}]},
+  {id:'gamma',name:'Gamma (γ) Decay',color:[1,1,0.3],desc:'Excited nucleus → ground state via γ. ΔZ=ΔA=0.',eq:'ᴬ_ZX* → ᴬ_ZX + γ  (⁶⁰Co: 1.17+1.33 MeV)',parentZ:27,parentA:60,parentSym:'⁶⁰Co*',daughterZ:28,daughterA:60,daughterSym:'⁶⁰Ni',particles:[{key:'γ',born:0,vscale:2.5,angle:Math.PI*0.2,shortLived:false},{key:'γ',born:0.05,vscale:2.5,angle:Math.PI*1.1,shortLived:false},{key:'Υ',born:0,vscale:0.18,angle:Math.PI*0.9,shortLived:false}]},
+  {id:'spontaneous_fission',name:'Spontaneous Fission',color:[1,0.4,0.7],desc:'Binary fission ~96%, ternary (α+2 frags) ~4%. 2–4 prompt neutrons, ~200 MeV total.',eq:'²⁵²Cf → 2 fragments + 2–4n + γ',parentZ:98,parentA:252,parentSym:'²⁵²Cf',daughterZ:42,daughterA:102,daughterSym:'fragments',particles:[]},
+];
+
+const U238_CHAIN=[
+  {iso:'²³⁸U',el:'U',Z:92,A:238,t:'4.468×10⁹ yr',mode:'α',color:'#ff6e40',desc:'Primordial. α 4.267 MeV.'},
+  {iso:'²³⁴Th',el:'Th',Z:90,A:234,t:'24.10 days',mode:'β⁻',color:'#ffa726',desc:'β⁻ 0.273 MeV.'},
+  {iso:'²³⁴Pa',el:'Pa',Z:91,A:234,t:'1.159 min',mode:'β⁻',color:'#ffca28',desc:'β⁻ 2.196 MeV.'},
+  {iso:'²³⁴U',el:'U',Z:92,A:234,t:'245,500 yr',mode:'α',color:'#ff6e40',desc:'α 4.858 MeV.'},
+  {iso:'²³⁰Th',el:'Th',Z:90,A:230,t:'75,400 yr',mode:'α',color:'#ffa726',desc:'α 4.688 MeV.'},
+  {iso:'²²⁶Ra',el:'Ra',Z:88,A:226,t:'1,600 yr',mode:'α',color:'#ef5350',desc:'Radium (Curie 1898). α 4.871 MeV.'},
+  {iso:'²²²Rn',el:'Rn',Z:86,A:222,t:'3.82 days',mode:'α',color:'#ab47bc',desc:'Noble gas — lung hazard.'},
+  {iso:'²¹⁸Po',el:'Po',Z:84,A:218,t:'3.07 min',mode:'α',color:'#7e57c2',desc:'α 6.002 MeV.'},
+  {iso:'²¹⁴Pb',el:'Pb',Z:82,A:214,t:'26.8 min',mode:'β⁻',color:'#42a5f5',desc:'β⁻ 1.024 MeV.'},
+  {iso:'²¹⁴Bi',el:'Bi',Z:83,A:214,t:'19.7 min',mode:'β⁻',color:'#26c6da',desc:'β⁻ 3.272 MeV.'},
+  {iso:'²¹⁴Po',el:'Po',Z:84,A:214,t:'164 μs',mode:'α',color:'#66bb6a',desc:'Shortest-lived natural α.'},
+  {iso:'²¹⁰Pb',el:'Pb',Z:82,A:210,t:'22.2 yr',mode:'β⁻',color:'#42a5f5',desc:'β⁻ 0.064 MeV.'},
+  {iso:'²¹⁰Bi',el:'Bi',Z:83,A:210,t:'5.01 days',mode:'β⁻',color:'#26c6da',desc:'β⁻ 1.163 MeV.'},
+  {iso:'²¹⁰Po',el:'Po',Z:84,A:210,t:'138.4 days',mode:'α',color:'#66bb6a',desc:'α 5.304 MeV.'},
+  {iso:'²⁰⁶Pb',el:'Pb',Z:82,A:206,t:'stable',mode:'—',color:'#bdbdbd',desc:'Stable end product.'},
+];
+
+let currentEl=ELEMENTS[0];
+let N_qn=1,L_qn=0,M_qn=0;
+let particleCount=80000,pointSize=1.8;
+let xClip=0,yClip=0,zClip=0;
+let showGrid=true,showNucleusMarker=true,showBohrRing=true;
+let computing=false;
+let motionMode='orbital';
+let motionSpeed=1.0;
+let elSizeT=0.33;
+let viewMode='full';
+let sliceAxis=1,sliceDepth=0;
+let nucScaleT=0;
+let compoundMode=null;
+let decayMode=null;
+let decaySpeedMult=30;
+let bohrElectrons=[];
+let paused=false;
+let hadronMode=null;
+let hadronParticles=[];
+let decayParticles=[];
+let decayClock=0;
+let decayParentNucleus={visible:true,r:1,g:0.75,b:0.2,alpha:1};
+let decayDaughterNucleus={visible:false,r:0.3,g:0.8,b:1,alpha:0};
+let fissionDaughters=[];
+let fissionNeutrons=[];
+let fissionGammas=[];
+let fissionClock=0;
+let fissionRestartTimer=null;
+const FISSION_TERNARY_PROB=0.04;
+
+const QCD_COLORS={R:{r:1.0,g:0.05,b:0.05},G:{r:0.05,g:1.0,b:0.05},B:{r:0.05,g:0.15,b:1.0}};
+let colorStringGluons=[];
+let flavorExchangeTimer=0;
+const FLAVOR_EXCHANGE_INTERVAL=2.2;
+const COLOR_EXCHANGE_INTERVAL=0.45;
+let colorExchangeTimer=0;
+
+let mesonParticles=[];
+let mesonTimer=0;
+const MESON_SPAWN_INTERVAL=0.6;
+const MESON_LIFETIME=1.4;
+
+const MESON_TYPES=[
+  {key:'pi0',prob:0.35,color:[0.85,0.85,0.2],size:5,label:'π⁰'},
+  {key:'pip',prob:0.15,color:[0.95,0.65,0.1],size:5,label:'π⁺'},
+  {key:'pim',prob:0.15,color:[0.65,0.3,0.95],size:5,label:'π⁻'},
+  {key:'sigma',prob:0.20,color:[0.6,0.85,0.4],size:4,label:'σ'},
+  {key:'omega',prob:0.10,color:[0.4,0.9,0.9],size:4.5,label:'ω'},
+  {key:'rho',prob:0.05,color:[1.0,0.4,0.8],size:4,label:'ρ'},
+];
+
+function pickMesonType(){let r=Math.random(),cum=0;for(const m of MESON_TYPES){cum+=m.prob;if(r<cum)return m;}return MESON_TYPES[0];}
+function spawnMeson(vq,R){if(vq.length<2)return;const i=Math.floor(Math.random()*vq.length);let j=Math.floor(Math.random()*(vq.length-1));if(j>=i)j++;const q1=vq[i],q2=vq[j];const mt=pickMesonType();mesonParticles.push({key:mt.key,srcIdx:i,dstIdx:j,x:q1.x,y:q1.y,z:q1.z,dstX:q2.x,dstY:q2.y,dstZ:q2.z,r:mt.color[0],g:mt.color[1],b:mt.color[2],size:mt.size,progress:0,speed:1.8+Math.random()*1.2,life:0,lifeMax:MESON_LIFETIME,dead:false,label:mt.label});}
+function updateMesons(dt,vq,spd){mesonTimer+=dt;if(mesonTimer>=MESON_SPAWN_INTERVAL&&vq.length>=2){mesonTimer=0;spawnMeson(vq,18);}mesonParticles=mesonParticles.filter(m=>!m.dead);mesonParticles.forEach(m=>{m.life+=dt;m.progress+=dt*m.speed*spd;if(vq[m.srcIdx]){m.x=vq[m.srcIdx].x;m.y=vq[m.srcIdx].y;m.z=vq[m.srcIdx].z;}if(vq[m.dstIdx]){m.dstX=vq[m.dstIdx].x;m.dstY=vq[m.dstIdx].y;m.dstZ=vq[m.dstIdx].z;}if(m.life>=m.lifeMax||m.progress>=1.0)m.dead=true;});}
+function assignQCDColors(valenceQuarks){const colors=['R','G','B'];for(let i=colors.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[colors[i],colors[j]]=[colors[j],colors[i]];}valenceQuarks.forEach((q,i)=>{q.colorCharge=colors[i%3];applyQCDColor(q);});}
+function applyQCDColor(q){const c=QCD_COLORS[q.colorCharge]||QCD_COLORS.R;q.r=c.r;q.g=c.g;q.b=c.b;}
+function triggerColorExchange(quarks){if(quarks.length<2)return;const i=Math.floor(Math.random()*quarks.length);let j=Math.floor(Math.random()*(quarks.length-1));if(j>=i)j++;const q1=quarks[i],q2=quarks[j];const c1=QCD_COLORS[q1.colorCharge],c2=QCD_COLORS[q2.colorCharge];colorStringGluons.push({srcX:q1.x,srcY:q1.y,srcZ:q1.z,dstX:q2.x,dstY:q2.y,dstZ:q2.z,srcIdx:i,dstIdx:j,progress:0,speed:2.0+Math.random()*1.5,r:(c1.r+c2.r)*0.5,g:(c1.g+c2.g)*0.5,b:(c1.b+c2.b)*0.5,dead:false,wobble:Math.random()*Math.PI*2,wobbleFreq:3+Math.random()*4,fromColor:q1.colorCharge,toColor:q2.colorCharge});}
+
+let flavorExchangeActive=false,flavorExchangeData=null;
+function triggerFlavorExchange(valenceQuarks,hadronType){if(flavorExchangeActive)return;const candidates=valenceQuarks.filter(q=>hadronType==='proton'?q.flavor==='u':q.flavor==='d');if(!candidates.length)return;const quark=candidates[Math.floor(Math.random()*candidates.length)];const partner=valenceQuarks.find(q=>q!==quark&&(hadronType==='proton'?q.flavor==='d':q.flavor==='u'));if(!partner)return;const newFlavor=hadronType==='proton'?'d':'u';flavorExchangeActive=true;flavorExchangeData={quark,partner,originalFlavor:quark.flavor,newFlavor,duration:0.35+Math.random()*0.25,age:0,originalColorCharge:quark.colorCharge};quark.flavor=newFlavor;}
+function updateFlavorExchange(dt){if(!flavorExchangeActive||!flavorExchangeData)return;flavorExchangeData.age+=dt;if(flavorExchangeData.age>=flavorExchangeData.duration){flavorExchangeData.quark.flavor=flavorExchangeData.originalFlavor;flavorExchangeActive=false;flavorExchangeData=null;}}
+
+function tgamma(z){if(z<0.5)return Math.PI/(Math.sin(Math.PI*z)*tgamma(1-z));z-=1;const c=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7];let x=c[0];for(let i=1;i<9;i++)x+=c[i]/(z+i);const t=z+7.5;return Math.sqrt(2*Math.PI)*Math.pow(t,z+0.5)*Math.exp(-t)*x;}
+let rCDF=null,rMaxVal=0,tCDF=null;
+function buildRCDF(n,l){const N=4096;rMaxVal=10*n*n;const dr=rMaxVal/(N-1);const raw=new Float64Array(N);let sum=0;for(let i=0;i<N;i++){const r=i*dr;const rho=2*r/n;const k=n-l-1;const alpha_L=2*l+1;let Lval;if(k===0){Lval=1;}else if(k===1){Lval=1+alpha_L-rho;}else{let Lprev=1,Lcurr=1+alpha_L-rho;for(let j=2;j<=k;j++){const Lnext=((2*j-1+alpha_L-rho)*Lcurr-(j-1+alpha_L)*Lprev)/j;Lprev=Lcurr;Lcurr=Lnext;}Lval=Lcurr;}const normSq=Math.pow(2/n,3)*tgamma(n-l)/(2*n*tgamma(n+l+1));const norm=Math.sqrt(normSq);const R=norm*Math.exp(-rho/2)*Math.pow(rho||1e-14,l)*Lval;const val=r*r*R*R;raw[i]=val;sum+=val;}rCDF=new Float64Array(N);let run=0;for(let i=0;i<N;i++){run+=raw[i]/sum;rCDF[i]=run;}}
+function sampleR(){const u=Math.random();let lo=0,hi=rCDF.length-1;while(lo<hi){const m=(lo+hi)>>1;rCDF[m]<u?lo=m+1:hi=m;}return lo*(rMaxVal/(rCDF.length-1));}
+function buildThetaCDF(l,m){const N=2048,d=Math.PI/(N-1),am=Math.abs(m);const raw=new Float64Array(N);let sum=0;for(let i=0;i<N;i++){const th=i*d,x=Math.cos(th);let Pmm=1;if(am>0){const s=Math.sqrt(Math.max(0,(1-x)*(1+x)));let f=1;for(let j=1;j<=am;j++){Pmm*=-f*s;f+=2;}}let Plm;if(l===am){Plm=Pmm;}else if(l===am+1){Plm=x*(2*am+1)*Pmm;}else{let Pm1m=x*(2*am+1)*Pmm,prev=Pmm;for(let ll=am+2;ll<=l;ll++){const Pll=((2*ll-1)*x*Pm1m-(ll+am-1)*prev)/(ll-am);prev=Pm1m;Pm1m=Pll;}Plm=Pm1m;}const val=Math.sin(th)*Plm*Plm;sum+=val;raw[i]=sum;}tCDF=new Float64Array(N);for(let i=0;i<N;i++)tCDF[i]=raw[i]/sum;}
+function sampleTheta(){const u=Math.random();let lo=0,hi=tCDF.length-1;while(lo<hi){const m=(lo+hi)>>1;tCDF[m]<u?lo=m+1:hi=m;}return lo*(Math.PI/(tCDF.length-1));}
+function randn(){let u=0,v=0;while(!u)u=Math.random();while(!v)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function hotColor(r,Zeff){const t=1-Math.min(r/(rMaxVal*0.35),1);let rr,gg,bb;if(t<0.25){const s=t/0.25;rr=s*0.35;gg=0;bb=s*0.75;}else if(t<0.5){const s=(t-0.25)/0.25;rr=0.35+s*0.65;gg=0;bb=0.75-s*0.25;}else if(t<0.75){const s=(t-0.5)/0.25;rr=1;gg=s*0.6;bb=0.5-s*0.5;}else{const s=(t-0.75)/0.25;rr=1;gg=0.6+s*0.4;bb=s;}const zt=Math.min((Zeff-1)/30,1);rr*=(1-zt*0.22);bb+=zt*0.14*(1-bb);return[rr,gg,bb,0.2+t*0.62];}
+function pCurrent(x,y,z,n,l,m,Zeff){if(m===0)return[0,0,0];const r=Math.sqrt(x*x+y*y+z*z)+1e-6;const rxy=Math.sqrt(x*x+y*y)+1e-6;const px=-y/rxy,py=x/rxy;const spd=Math.abs(m)*Zeff*0.7/(r*r+0.5);const sign=m>0?1:-1;return[px*spd*sign,py*spd*sign,0];}
+function sliceTest(x,y,z){if(xClip!==0&&x>xClip)return true;if(yClip!==0&&y>yClip)return true;if(zClip!==0&&z>zClip)return true;if(viewMode==='full')return false;const c=[x,y,z];if(viewMode==='half')return c[sliceAxis]>sliceDepth;if(viewMode==='quad'){const a2=(sliceAxis+1)%3;return c[sliceAxis]>sliceDepth||c[a2]>sliceDepth;}if(viewMode==='slab')return Math.abs(c[sliceAxis]-sliceDepth)>4;return false;}
+
+function setupBohrElectrons(){bohrElectrons=[];const shellCap=[2,8,18,32,50,72,98];let rem=currentEl.z;for(let n=1;n<=7&&rem>0;n++){const inShell=Math.min(shellCap[n-1],rem);rem-=inShell;const orbitR=n*n*8/Math.max(Math.sqrt(currentEl.Zeff),1);const omega=currentEl.Zeff/(n*n*n)*1.2;for(let e=0;e<inShell;e++){const angle0=(e/inShell)*Math.PI*2;const seed1=((e*2654435761+n*1234567891)>>>0);const seed2=((e*1640531527+n*2246822519)>>>0);const incl=Math.acos((seed1%1000)/1000*2-1);const az=(seed2%1000)/1000*Math.PI*2;bohrElectrons.push({n,orbitR,omega,angle:angle0,incl,az});}}}
+function bohrElectronPos(be){const R=be.orbitR,ca=Math.cos(be.angle),sa=Math.sin(be.angle);const ci=Math.cos(be.incl),si=Math.sin(be.incl);const cz_=Math.cos(be.az),sz_=Math.sin(be.az);const tx=R*ca,ty=0,tz=R*sa;const rx=tx,ry=ty*ci-tz*si,rz=ty*si+tz*ci;return[rx*cz_+rz*sz_,ry,-rx*sz_+rz*cz_];}
+
+function spawnSeaAndGluons(R,nGluons,nSea){
+  for(let i=0;i<nGluons;i++){const ang=Math.random()*Math.PI*2,rad=Math.random()*R*0.72+2,speed=1.5+Math.random()*2;const colorKeys=['R','G','B'];const c1=QCD_COLORS[colorKeys[Math.floor(Math.random()*3)]];const c2=QCD_COLORS[colorKeys[Math.floor(Math.random()*3)]];hadronParticles.push({type:'gluon',key:'g',valence:false,x:Math.cos(ang)*rad,y:Math.sin(ang)*rad,z:(Math.random()-0.5)*5,vx:Math.cos(ang+Math.PI*0.5)*speed*(Math.random()<0.5?1:-1),vy:Math.sin(ang+Math.PI*0.5)*speed*(Math.random()<0.5?1:-1),vz:(Math.random()-0.5)*0.4,r:(c1.r+c2.r)*0.5,g:(c1.g+c2.g)*0.5,b:(c1.b+c2.b)*0.5,size:2,phase:Math.random()*Math.PI*2,phaseSpeed:speed*0.4,orbitR:rad,lifeMax:0.3+Math.random()*0.9,life:0});}
+  for(let i=0;i<nSea;i++){const ang=Math.random()*Math.PI*2,rad=Math.random()*R*0.58+3;hadronParticles.push({type:'quark',key:'sea-u',valence:false,x:Math.cos(ang)*rad,y:Math.sin(ang)*rad,z:(Math.random()-0.5)*5,vx:(Math.random()-0.5)*1.0,vy:(Math.random()-0.5)*1.0,vz:(Math.random()-0.5)*0.3,r:0.7,g:0.4,b:0.4,size:2.5,phase:Math.random()*Math.PI*2,phaseSpeed:1.2,orbitR:rad,lifeMax:1.5+Math.random()*2.5,life:0});}
+}
+
+function setupProtonParticles(){hadronParticles=[];colorStringGluons=[];mesonParticles=[];flavorExchangeActive=false;flavorExchangeData=null;const R=18;[{flavor:'u'},{flavor:'u'},{flavor:'d'}].forEach((q,i)=>{const ang=i/3*Math.PI*2;const p={type:'quark',key:q.flavor,flavor:q.flavor,valence:true,x:Math.cos(ang)*R*0.38,y:Math.sin(ang)*R*0.38,z:(Math.random()-0.5)*4,vx:(Math.random()-0.5)*1.4,vy:(Math.random()-0.5)*1.4,vz:(Math.random()-0.5)*0.5,r:1,g:0.05,b:0.05,size:5,phase:i*Math.PI*2/3,phaseSpeed:0.7+Math.random()*0.5,orbitR:R*0.35,kickTimer:Math.random()*0.5,colorCharge:'R'};hadronParticles.push(p);});assignQCDColors(hadronParticles.filter(p=>p.valence));spawnSeaAndGluons(R,16,5);}
+function setupNeutronParticles(){hadronParticles=[];colorStringGluons=[];mesonParticles=[];flavorExchangeActive=false;flavorExchangeData=null;const R=18;[{flavor:'d'},{flavor:'d'},{flavor:'u'}].forEach((q,i)=>{const ang=i/3*Math.PI*2;const p={type:'quark',key:q.flavor,flavor:q.flavor,valence:true,x:Math.cos(ang)*R*0.38,y:Math.sin(ang)*R*0.38,z:(Math.random()-0.5)*4,vx:(Math.random()-0.5)*1.4,vy:(Math.random()-0.5)*1.4,vz:(Math.random()-0.5)*0.5,r:0.05,g:0.15,b:1,size:5,phase:i*Math.PI*2/3,phaseSpeed:0.7+Math.random()*0.5,orbitR:R*0.35,kickTimer:Math.random()*0.5,colorCharge:'B'};hadronParticles.push(p);});assignQCDColors(hadronParticles.filter(p=>p.valence));spawnSeaAndGluons(R,16,5);}
+function setupNucleusParticles(){hadronParticles=[];colorStringGluons=[];mesonParticles=[];flavorExchangeActive=false;flavorExchangeData=null;const Z=Math.min(currentEl.z,20),Nt=Math.round(Z*1.2);const R=Math.cbrt(Z+Nt)*4.5;for(let i=0;i<Z;i++){const ang=Math.random()*Math.PI*2,el2=Math.asin(Math.random()*2-1),r=(Math.random()*0.7+0.15)*R;hadronParticles.push({type:'proton',key:'u',flavor:'u',valence:true,x:Math.cos(el2)*Math.cos(ang)*r,y:Math.cos(el2)*Math.sin(ang)*r,z:Math.sin(el2)*r,vx:(Math.random()-0.5)*0.8,vy:(Math.random()-0.5)*0.8,vz:(Math.random()-0.5)*0.8,r:1.0,g:0.05,b:0.05,size:4.5,phase:Math.random()*Math.PI*2,phaseSpeed:0.4+Math.random()*0.3,orbitR:r,label:'p',nucleonR:R,kickTimer:Math.random()*0.8,colorCharge:'R'});}for(let i=0;i<Nt;i++){const ang=Math.random()*Math.PI*2,el2=Math.asin(Math.random()*2-1),r=(Math.random()*0.7+0.15)*R;hadronParticles.push({type:'neutron',key:'d',flavor:'d',valence:true,x:Math.cos(el2)*Math.cos(ang)*r,y:Math.cos(el2)*Math.sin(ang)*r,z:Math.sin(el2)*r,vx:(Math.random()-0.5)*0.8,vy:(Math.random()-0.5)*0.8,vz:(Math.random()-0.5)*0.8,r:0.05,g:0.15,b:1.0,size:4.5,phase:Math.random()*Math.PI*2,phaseSpeed:0.4+Math.random()*0.3,orbitR:r,label:'n',nucleonR:R,kickTimer:Math.random()*0.8,colorCharge:'B'});}spawnSeaAndGluons(R,30,8);}
+
+function updateHadron(dt){
+  if(!hadronParticles.length)return;
+  const nucleonRef=hadronParticles.find(p=>p.valence);
+  const R=hadronMode==='nucleus'?(nucleonRef?.nucleonR||20):18;
+  const spd=motionSpeed;
+  hadronParticles=hadronParticles.filter(p=>!(p.lifeMax&&p.life>p.lifeMax));
+  const valenceQuarks=hadronParticles.filter(p=>p.valence);
+  colorExchangeTimer+=dt;
+  if(colorExchangeTimer>=COLOR_EXCHANGE_INTERVAL&&valenceQuarks.length>=2){colorExchangeTimer=0;if(hadronMode!=='nucleus')triggerColorExchange(valenceQuarks);}
+  if(hadronMode==='nucleus'){updateMesons(dt,valenceQuarks,spd);}
+  if(hadronMode==='proton'||hadronMode==='neutron'){flavorExchangeTimer+=dt;if(flavorExchangeTimer>=FLAVOR_EXCHANGE_INTERVAL){flavorExchangeTimer=0;triggerFlavorExchange(valenceQuarks,hadronMode);}updateFlavorExchange(dt);}
+  colorStringGluons=colorStringGluons.filter(g=>!g.dead);
+  colorStringGluons.forEach(g=>{g.progress+=dt*g.speed*0.5;const src=valenceQuarks[g.srcIdx],dst=valenceQuarks[g.dstIdx];if(src){g.srcX=src.x;g.srcY=src.y;g.srcZ=src.z;}if(dst){g.dstX=dst.x;g.dstY=dst.y;g.dstZ=dst.z;}if(g.progress>=1.0){if(src&&dst&&src.colorCharge&&dst.colorCharge){const tmp=src.colorCharge;src.colorCharge=dst.colorCharge;dst.colorCharge=tmp;applyQCDColor(src);applyQCDColor(dst);}g.dead=true;}g.wobble+=dt*7;});
+  hadronParticles.forEach(p=>{if(p.lifeMax)p.life+=dt;p.phase+=p.phaseSpeed*dt*spd;if(p.valence){if(p.kickTimer!==undefined){p.kickTimer-=dt;if(p.kickTimer<=0){const kickStr=(0.8+Math.random()*1.2)*spd;p.vx+=(Math.random()-0.5)*kickStr;p.vy+=(Math.random()-0.5)*kickStr;p.vz+=(Math.random()-0.5)*kickStr*0.4;p.kickTimer=0.12+Math.random()*0.25;}}const moveScale=hadronMode==='nucleus'?8:14;p.x+=p.vx*dt*spd*moveScale;p.y+=p.vy*dt*spd*moveScale;p.z+=p.vz*dt*spd*(hadronMode==='nucleus'?3:5);const dist=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);const boundary=hadronMode==='nucleus'?R*0.65:R*0.62;if(dist>boundary*0.5){const st=0.6*Math.max(0,(dist-boundary*0.4)/boundary);p.vx-=(p.x/dist)*st*dt*spd*(hadronMode==='nucleus'?8:18);p.vy-=(p.y/dist)*st*dt*spd*(hadronMode==='nucleus'?8:18);p.vz-=(p.z/dist)*st*dt*spd*(hadronMode==='nucleus'?4:8);}if(dist>boundary){const k=1.2*(dist-boundary)/(dist+0.01);p.vx-=p.x*k*dt*spd*4;p.vy-=p.y*k*dt*spd*4;p.vz-=p.z*k*dt*spd*2;}const speed=Math.sqrt(p.vx*p.vx+p.vy*p.vy+p.vz*p.vz);const maxSpeed=hadronMode==='nucleus'?1.8:2.5;if(speed>maxSpeed){p.vx*=maxSpeed/speed;p.vy*=maxSpeed/speed;p.vz*=maxSpeed/speed;}}else if(p.type==='gluon'){p.x+=p.vx*dt*spd*7;p.y+=p.vy*dt*spd*7;const dist=Math.sqrt(p.x*p.x+p.y*p.y);if(dist>R*0.82){p.vx*=-0.85;p.vy*=-0.85;}p.vx+=(Math.random()-0.5)*0.07;p.vy+=(Math.random()-0.5)*0.07;}else{p.x+=p.vx*dt*spd*6;p.y+=p.vy*dt*spd*6;p.z+=p.vz*dt*spd*2;const dist=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);if(dist>R*0.72){p.vx*=-0.8;p.vy*=-0.8;}}});
+  const nG=hadronParticles.filter(p=>p.type==='gluon').length;if(nG<16&&Math.random()<0.35){const ang=Math.random()*Math.PI*2,rad=Math.random()*R*0.65+2,speed=1.5+Math.random()*2;const colorKeys=['R','G','B'];const c1=QCD_COLORS[colorKeys[Math.floor(Math.random()*3)]];const c2=QCD_COLORS[colorKeys[Math.floor(Math.random()*3)]];hadronParticles.push({type:'gluon',key:'g',valence:false,x:Math.cos(ang)*rad,y:Math.sin(ang)*rad,z:(Math.random()-0.5)*4,vx:Math.cos(ang+Math.PI*0.5)*speed,vy:Math.sin(ang+Math.PI*0.5)*speed,vz:(Math.random()-0.5)*0.4,r:(c1.r+c2.r)*0.5,g:(c1.g+c2.g)*0.5,b:(c1.b+c2.b)*0.5,size:2,phase:Math.random()*Math.PI*2,phaseSpeed:speed*0.4,orbitR:rad,lifeMax:0.4+Math.random()*0.9,life:0});}
+}
+
+let positions=null,velocities=null,colors=null,vertexCount=0;
+
+function buildElectronCloud(count){buildRCDF(1,0);buildThetaCDF(0,0);const arr=new Float32Array(count*3);let k=0;while(k<count){const r=sampleR()*0.5,theta=sampleTheta(),phi=Math.random()*Math.PI*2;arr[k*3]=r*Math.sin(theta)*Math.cos(phi);arr[k*3+1]=r*Math.sin(theta)*Math.sin(phi);arr[k*3+2]=r*Math.cos(theta);k++;}return arr;}
+function generateFission(){
+  const isTernary=Math.random()<FISSION_TERNARY_PROB;fissionDaughters=[];fissionNeutrons=[];fissionGammas=[];fissionClock=0;clearTimeout(fissionRestartTimer);fissionRestartTimer=null;
+  const electronsPerDaughter=Math.floor(particleCount*0.25);const baseAngle=Math.random()*Math.PI*2;
+  if(!isTernary){for(let i=0;i<2;i++){const angle=baseAngle+(i===0?0:Math.PI)+(Math.random()-0.5)*0.35;const speed=1.4+Math.random()*0.4;const elCloud=buildElectronCloud(electronsPerDaughter);fissionDaughters.push({x:0,y:0,z:0,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed*0.3,vz:(Math.random()-0.5)*0.35,alpha:1,radius:3.4,elCloud,elCount:electronsPerDaughter,isAlpha:false,key:'frag',r:0.3+Math.random()*0.4,g:0.6+Math.random()*0.3,b:0.8+Math.random()*0.2});}}
+  else{const alphaAngle=baseAngle+Math.PI*0.5+(Math.random()-0.5)*0.4;for(let i=0;i<2;i++){const angle=baseAngle+(i===0?0:Math.PI)+(Math.random()-0.5)*0.28;const speed=1.25+Math.random()*0.3;const elCloud=buildElectronCloud(electronsPerDaughter);fissionDaughters.push({x:0,y:0,z:0,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed*0.25,vz:(Math.random()-0.5)*0.3,alpha:1,radius:3.2,elCloud,elCount:electronsPerDaughter,isAlpha:false,key:'frag',r:0.3+Math.random()*0.4,g:0.6+Math.random()*0.3,b:0.8+Math.random()*0.2});}const alphaCloud=buildElectronCloud(Math.floor(electronsPerDaughter*0.1));fissionDaughters.push({x:0,y:0,z:0,vx:Math.cos(alphaAngle)*2.2,vy:Math.sin(alphaAngle)*2.2*0.2,vz:(Math.random()-0.5)*0.5,alpha:1,radius:1.4,elCloud:alphaCloud,elCount:alphaCloud.length/3,isAlpha:true,key:'α',r:1.0,g:0.5,b:0.1});}
+  const nNeutrons=2+Math.floor(Math.random()*3);for(let i=0;i<nNeutrons;i++){const ang=Math.random()*Math.PI*2;const elev=(Math.random()-0.5)*Math.PI*0.6;const spd=2.0+Math.random()*1.5;fissionNeutrons.push({x:0,y:0,z:0,vx:Math.cos(ang)*Math.cos(elev)*spd,vy:Math.sin(elev)*spd,vz:Math.sin(ang)*Math.cos(elev)*spd,trail:[],dead:false,key:'n'});}
+  const nGamma=2+Math.floor(Math.random()*3);for(let i=0;i<nGamma;i++){const ang=Math.random()*Math.PI*2;const elev=(Math.random()-0.5)*Math.PI*0.8;const spd=3.5+Math.random()*1.5;fissionGammas.push({x:0,y:0,z:0,vx:Math.cos(ang)*Math.cos(elev)*spd,vy:Math.sin(elev)*spd*0.5,vz:Math.sin(ang)*Math.cos(elev)*spd,trail:[],dead:false,bornAt:0.25+Math.random()*0.4,key:'γ'});}
+  const hud=document.getElementById('decayHUD');hud.innerHTML=`<b style="color:#ff8a80">Spontaneous Fission — ${isTernary?'<span style="color:#ffd54f">TERNARY (α+2 fragments)</span>':'Binary (2 fragments)'}</b><br><span style="color:#607090">²⁵²Cf → ${isTernary?'α + 2 fragments':'2 fragments'} + ${nNeutrons}n + ${nGamma}γ</span>`;hud.style.display='block';
+  document.getElementById('status').textContent=`Fission: ${isTernary?'Ternary':'Binary'} · ${nNeutrons}n + ${nGamma}γ`;document.getElementById('compLabel').style.display='none';['protonHUD','neutronHUD','nucleusHUD'].forEach(id=>document.getElementById(id).style.display='none');
+  positions=null;vertexCount=0;fissionRestartTimer=setTimeout(()=>{if(decayMode==='spontaneous_fission'&&!paused)generateFission();},12000);
+}
+function updateFission(wallDt){fissionClock+=wallDt;const spd=motionSpeed;decayParentNucleus.alpha=Math.max(0,1-fissionClock*3.0);fissionDaughters.forEach(d=>{d.x+=d.vx*wallDt*spd*15;d.y+=d.vy*wallDt*spd*15;d.z+=d.vz*wallDt*spd*8;d.vx*=0.993;d.vy*=0.993;d.vz*=0.995;});fissionNeutrons.forEach(n=>{if(n.dead)return;n.trail.push([n.x,n.y,n.z]);if(n.trail.length>30)n.trail.shift();n.x+=n.vx*wallDt*spd*18;n.y+=n.vy*wallDt*spd*18;n.z+=n.vz*wallDt*spd*8;if(Math.hypot(n.x,n.y,n.z)>180)n.dead=true;});fissionGammas.forEach(g=>{if(g.dead||fissionClock<g.bornAt)return;g.trail.push([g.x,g.y,g.z]);if(g.trail.length>20)g.trail.shift();g.x+=g.vx*wallDt*spd*22;g.y+=g.vy*wallDt*spd*22;g.z+=g.vz*wallDt*spd*10;if(Math.hypot(g.x,g.y,g.z)>200)g.dead=true;});}
+
+function generateNonFissionDecay(){
+  const d=DECAY_TYPES.find(x=>x.id===decayMode);if(!d)return;
+  buildRCDF(1,0);buildThetaCDF(0,0);const count=Math.floor(particleCount*0.3);
+  positions=new Float32Array(count*3);velocities=new Float32Array(count*3);colors=new Float32Array(count*4);let kept=0;
+  for(let i=0;i<count;i++){const r=sampleR()*0.5,theta=sampleTheta(),phi=Math.random()*2*Math.PI;const sx=r*Math.sin(theta)*Math.cos(phi),sy=r*Math.sin(theta)*Math.sin(phi),sz=r*Math.cos(theta);positions[kept*3]=sx;positions[kept*3+1]=sy;positions[kept*3+2]=sz;colors[kept*4]=0.18;colors[kept*4+1]=0.38;colors[kept*4+2]=0.8;colors[kept*4+3]=0.1;kept++;}
+  vertexCount=kept;decayClock=0;decayParticles=[];decayParentNucleus={visible:true,r:1,g:0.75,b:0.2,alpha:1};decayDaughterNucleus={visible:false,r:0.3,g:0.8,b:1,alpha:0};
+  const INITIAL_DECAY_DELAY=0.5,BOSON_LIFETIME=0.45;
+  d.particles.forEach(pd=>{const ang=pd.angle+(Math.random()-0.5)*0.25;const elev=(Math.random()-0.5)*0.4;const spd=pd.vscale*(0.9+Math.random()*0.2);const info=PARTICLE_INFO[pd.key]||{};let startAfter,animLife;if(pd.isBoson){startAfter=INITIAL_DECAY_DELAY;animLife=BOSON_LIFETIME;}else if(pd.fromBoson){startAfter=INITIAL_DECAY_DELAY+BOSON_LIFETIME;animLife=Infinity;}else{startAfter=INITIAL_DECAY_DELAY;animLife=Infinity;}decayParticles.push({...pd,info,physKey:pd.key,x:0,y:0,z:0,vx:Math.cos(ang)*Math.cos(elev)*spd,vy:Math.sin(elev)*spd,vz:Math.sin(ang)*Math.cos(elev)*spd,animAge:0,animLife,startAfter,isShortLived:pd.isBoson||false,isBoson:pd.isBoson||false,fromBoson:pd.fromBoson||false,dead:false,trail:[],color:info.color||[0.8,0.8,0.8],hasStarted:false});});
+  const hud=document.getElementById('decayHUD');hud.innerHTML=`<b style="color:#ff8a80">${d.name}</b><br><span style="color:#607090">${d.eq}</span><br><span style="color:#3a4a60">${d.parentSym} → ${d.daughterSym}</span>`;hud.style.display='block';document.getElementById('compLabel').style.display='none';['protonHUD','neutronHUD','nucleusHUD'].forEach(id=>document.getElementById(id).style.display='none');document.getElementById('status').textContent=`Decay: ${d.name} · ${d.parentSym} → ${d.daughterSym}`;
+}
+function updateNonFissionDecay(wallDt){
+  decayClock+=wallDt;
+  if(decayClock<0.3){decayParentNucleus.alpha=1;decayDaughterNucleus.alpha=0;}else if(decayClock<1.2){decayParentNucleus.alpha=Math.max(0,1-(decayClock-0.3)/0.9);}else{decayParentNucleus.alpha=0;}
+  const Y=decayParticles.find(p=>p.physKey==='Υ'&&!p.dead);if(Y&&decayClock>1.0){decayDaughterNucleus.visible=true;decayDaughterNucleus.alpha=Math.min(1,(decayClock-1.0)*1.5);}
+  if(decayParentNucleus.alpha<0.01&&positions&&vertexCount>0){positions=null;vertexCount=0;colors=null;}
+  decayParticles.forEach(p=>{if(p.dead)return;if(!p.hasStarted){if(decayClock>=p.startAfter){p.hasStarted=true;}else return;}p.animAge+=wallDt;if(p.isBoson){p.x+=p.vx*wallDt*0.2;p.y+=p.vy*wallDt*0.2;p.z+=p.vz*wallDt*0.2;const dist=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);if(dist>1.8){p.vx*=-0.6;p.vy*=-0.6;p.vz*=-0.6;}if(p.animAge>=p.animLife){p.dead=true;decayParticles.forEach(q=>{if(q.fromBoson&&!q.hasStarted){q.hasStarted=true;}});}return;}if(!p.fromBoson){p.trail.push([p.x,p.y,p.z]);if(p.trail.length>45)p.trail.shift();const spd=2.5*motionSpeed;p.x+=p.vx*wallDt*spd;p.y+=p.vy*wallDt*spd;p.z+=p.vz*wallDt*spd;}else{p.trail.push([p.x,p.y,p.z]);if(p.trail.length>38)p.trail.shift();const spd=2.8*motionSpeed;p.x+=p.vx*wallDt*spd;p.y+=p.vy*wallDt*spd;p.z+=p.vz*wallDt*spd;}const dist=Math.sqrt(p.x*p.x+p.y*p.y+p.z*p.z);if(dist>140)p.dead=true;});
+  const activeParts=decayParticles.filter(p=>!p.dead&&p.physKey!=='Υ'&&p.hasStarted);if(activeParts.length===0&&decayClock>3.5){decayClock=-0.8;generateNonFissionDecay();}
+}
+
+function generateParticles(){
+  if(hadronMode){generateHadronMode();return;}
+  if(decayMode==='spontaneous_fission'){generateFission();return;}
+  if(decayMode){generateNonFissionDecay();return;}
+  if(compoundMode){generateCompound();return;}
+  buildRCDF(N_qn,L_qn);buildThetaCDF(L_qn,M_qn);setupBohrElectrons();
+  const Zeff=currentEl.Zeff,count=particleCount;
+  positions=new Float32Array(count*3);velocities=new Float32Array(count*3);colors=new Float32Array(count*4);let kept=0;
+  if(motionMode!=='bohr'){for(let i=0;i<count;i++){const r=sampleR(),theta=sampleTheta(),phi=Math.random()*2*Math.PI;const sx=r*Math.sin(theta)*Math.cos(phi),sy=r*Math.sin(theta)*Math.sin(phi),sz=r*Math.cos(theta);if(sliceTest(sx,sy,sz))continue;positions[kept*3]=sx;positions[kept*3+1]=sy;positions[kept*3+2]=sz;const[vx,vy,vz]=pCurrent(sx,sy,sz,N_qn,L_qn,M_qn,Zeff);velocities[kept*3]=vx;velocities[kept*3+1]=vy;velocities[kept*3+2]=vz;const[rc,gc,bc,ac]=hotColor(r,Zeff);colors[kept*4]=rc;colors[kept*4+1]=gc;colors[kept*4+2]=bc;colors[kept*4+3]=ac;kept++;}}
+  vertexCount=kept;
+  document.getElementById('status').textContent=`${currentEl.sym} · n=${N_qn} l=${L_qn} m=${M_qn} · ${kept.toLocaleString()}`;
+  document.getElementById('compLabel').style.display='none';document.getElementById('decayHUD').style.display='none';['protonHUD','neutronHUD','nucleusHUD'].forEach(id=>document.getElementById(id).style.display='none');
+  setTapHint(false);
+}
+
+function generateHadronMode(){
+  positions=null;vertexCount=0;mesonParticles=[];mesonTimer=0;
+  document.getElementById('decayHUD').style.display='none';document.getElementById('compLabel').style.display='none';
+  if(hadronMode==='proton'){setupProtonParticles();document.getElementById('protonHUD').style.display='block';document.getElementById('neutronHUD').style.display='none';document.getElementById('nucleusHUD').style.display='none';document.getElementById('protonHUD').innerHTML='<b style="color:#00e676">Proton (uud) — QCD</b><br><span style="color:#3a6050">Quark color = QCD charge R/G/B. Gluons (green) exchange color. Purple = virtual W± flavor flip. Sea quarks (dim) = virtual qq̄.</span>';document.getElementById('status').textContent='Proton: uud · 938.272 MeV/c² · charge +1e';}
+  else if(hadronMode==='neutron'){setupNeutronParticles();document.getElementById('neutronHUD').style.display='block';document.getElementById('protonHUD').style.display='none';document.getElementById('nucleusHUD').style.display='none';document.getElementById('neutronHUD').innerHTML='<b style="color:#64b5f6">Neutron (udd) — QCD</b><br><span style="color:#3a5060">Quark color = QCD charge R/G/B. Gluons exchange color. Purple = virtual W± (d↔u flip). Free lifetime 878.4 s.</span>';document.getElementById('status').textContent='Neutron: udd · 939.565 MeV/c² · charge 0';}
+  else if(hadronMode==='nucleus'){setupNucleusParticles();document.getElementById('nucleusHUD').style.display='block';document.getElementById('protonHUD').style.display='none';document.getElementById('neutronHUD').style.display='none';const Z=Math.min(currentEl.z,20),Nt=Math.round(Z*1.2),A=Z+Nt;const Rnucl=(1.25*Math.pow(A,1/3)).toFixed(2);document.getElementById('nucleusHUD').innerHTML=`<b style="color:#ffb74d">Nucleus ${currentEl.sym} · Z=${Z} N=${Nt} A=${A}</b><br><span style="color:#504030">Red=protons, Blue=neutrons. Colored lines=pion/meson exchange (Yukawa). Yellow=π⁰, cyan=ω, pink=ρ, green=σ. R≈${Rnucl} fm.</span>`;document.getElementById('status').textContent=`Nucleus: ${currentEl.sym} · Z=${Z} N=${Nt} · R≈${Rnucl} fm`;}
+  camDist=50;setTapHint(true);
+}
+
+function generateCompound(){
+  const cmp=CMP_DB[compoundMode];if(!cmp)return;
+  const total=Math.floor(particleCount*2.5);positions=new Float32Array(total*3);velocities=new Float32Array(total*3);colors=new Float32Array(total*4);let kept=0;
+  const perAtom=Math.floor(particleCount*0.36/cmp.atoms.length);
+  function addGauss(cx,cy,cz,rad,count,r,g,b){for(let i=0;i<count&&kept<total;i++){const dx=randn()*rad,dy=randn()*rad,dz=randn()*rad;const px=cx+dx,py=cy+dy,pz=cz+dz;if(sliceTest(px,py,pz))continue;positions[kept*3]=px;positions[kept*3+1]=py;positions[kept*3+2]=pz;const t=Math.exp(-(dx*dx+dy*dy+dz*dz)/(rad*rad));colors[kept*4]=r;colors[kept*4+1]=g;colors[kept*4+2]=b;colors[kept*4+3]=0.1+t*0.58;kept++;}}
+  cmp.atoms.forEach(at=>addGauss(at.pos[0],at.pos[1],at.pos[2],at.Z===1?6.5:10.5,perAtom,at.c[0],at.c[1],at.c[2]));
+  cmp.bonds.forEach(([a,b,type])=>{
+    if(type==='ionic'){const p1=cmp.atoms[a].pos,p2=cmp.atoms[b].pos;addGauss(p1[0]*0.3+p2[0]*0.7,p1[1]*0.3+p2[1]*0.7,p1[2]*0.3+p2[2]*0.7,7,8000,0.95,0.85,0.2);return;}
+    if(type==='antibonding'){const p1=cmp.atoms[a].pos,p2=cmp.atoms[b].pos;const dx=p2[0]-p1[0],dy=p2[1]-p1[1],dz=p2[2]-p1[2];const len=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;addGauss(p1[0]-dx/len*5,p1[1]-dy/len*5,p1[2]-dz/len*5,5,3500,1,0.3,0.2);addGauss(p2[0]+dx/len*5,p2[1]+dy/len*5,p2[2]+dz/len*5,5,3500,1,0.3,0.2);return;}
+    const p1=cmp.atoms[a].pos,p2=cmp.atoms[b].pos;const mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2,mz=(p1[2]+p2[2])/2;const dx=p2[0]-p1[0],dy=p2[1]-p1[1],dz=p2[2]-p1[2];const len=Math.sqrt(dx*dx+dy*dy+dz*dz)||1;const ux=dx/len,uy=dy/len,uz=dz/len;let p1x,p1y,p1z;if(Math.abs(ux)<0.9){p1x=0;p1y=uz;p1z=-uy;}else{p1x=-uz;p1y=0;p1z=ux;}const pl=Math.sqrt(p1x*p1x+p1y*p1y+p1z*p1z)||1;p1x/=pl;p1y/=pl;p1z/=pl;const p2x=uy*p1z-uz*p1y,p2y=uz*p1x-ux*p1z,p2z2=ux*p1y-uy*p1x;const nSigma=type==='aromatic'?14000:type==='triple'?20000:type==='double'?16000:12000;for(let i=0;i<nSigma&&kept<total;i++){const t2=(Math.random()-0.5)*len*0.86,r1=randn()*3.0,r2=randn()*3.0;const ox=mx+ux*t2+p1x*r1+p2x*r2,oy=my+uy*t2+p1y*r1+p2y*r2,oz=mz+uz*t2+p1z*r1+p2z2*r2;if(sliceTest(ox,oy,oz))continue;positions[kept*3]=ox;positions[kept*3+1]=oy;positions[kept*3+2]=oz;colors[kept*4]=0.16;colors[kept*4+1]=0.82;colors[kept*4+2]=0.96;colors[kept*4+3]=0.3;kept++;}
+    if(type==='double'||type==='triple'||type==='aromatic'){for(const sgn of[-1,1]){for(let i=0;i<9000&&kept<total;i++){const t2=(Math.random()-0.5)*len*0.72;const radPi=Math.abs(randn())*4+2;const sp=randn()*2.2;const ox=mx+ux*t2+p1x*radPi*sgn+p2x*sp,oy=my+uy*t2+p1y*radPi*sgn+p2y*sp,oz=mz+uz*t2+p1z*radPi*sgn+p2z2*sp;if(sliceTest(ox,oy,oz))continue;positions[kept*3]=ox;positions[kept*3+1]=oy;positions[kept*3+2]=oz;colors[kept*4]=0.72;colors[kept*4+1]=0.18;colors[kept*4+2]=0.98;colors[kept*4+3]=0.28;kept++;}}}
+    if(type==='triple'){for(const sgn of[-1,1]){for(let i=0;i<7000&&kept<total;i++){const t2=(Math.random()-0.5)*len*0.65;const radPi=Math.abs(randn())*4+2;const ox=mx+ux*t2+p2x*radPi*sgn,oy=my+uy*t2+p2y*radPi*sgn,oz=mz+uz*t2+p2z2*radPi*sgn;if(sliceTest(ox,oy,oz))continue;positions[kept*3]=ox;positions[kept*3+1]=oy;positions[kept*3+2]=oz;colors[kept*4]=0.55;colors[kept*4+1]=0.12;colors[kept*4+2]=0.88;colors[kept*4+3]=0.24;kept++;}}}
+  });
+  cmp.lonePairs.forEach(lp=>addGauss(lp[0],lp[1],lp[2],5,4500,lp[3],lp[4],lp[5]));
+  vertexCount=kept;document.getElementById('status').textContent=`${compoundMode} · ${kept.toLocaleString()} pts`;
+  const lbl=document.getElementById('compLabel');lbl.textContent=(cmp.possible?'':'UNSTABLE: ')+cmp.label;lbl.style.color=cmp.possible?'#ffd54f':'#ff8a80';lbl.style.display='block';
+  document.getElementById('decayHUD').style.display='none';['protonHUD','neutronHUD','nucleusHUD'].forEach(id=>document.getElementById(id).style.display='none');
+  setTapHint(false);
+}
+
+const canvas=document.getElementById('c');
+const gl=canvas.getContext('webgl2',{antialias:true,alpha:false});
+const vPart=`#version 300 es\nprecision highp float;\nlayout(location=0)in vec3 aPos;layout(location=1)in vec4 aColor;\nout vec4 vColor;uniform mat4 uMVP;uniform float uPtSz;\nvoid main(){gl_Position=uMVP*vec4(aPos,1.0);gl_PointSize=clamp(uPtSz,0.3,14.0);vColor=aColor;}`;
+const fPart=`#version 300 es\nprecision mediump float;in vec4 vColor;out vec4 o;\nvoid main(){vec2 uv=gl_PointCoord*2.0-1.0;float d=dot(uv,uv);if(d>1.0)discard;o=vec4(vColor.rgb,(1.0-d*d)*vColor.a);}`;
+const vLine=`#version 300 es\nprecision highp float;layout(location=0)in vec3 aPos;uniform mat4 uMVP;uniform vec4 uColor;out vec4 vC;\nvoid main(){gl_Position=uMVP*vec4(aPos,1.0);vC=uColor;}`;
+const fLine=`#version 300 es\nprecision mediump float;in vec4 vC;out vec4 o;void main(){o=vC;}`;
+function mkSh(t,s){const sh=gl.createShader(t);gl.shaderSource(sh,s);gl.compileShader(sh);return sh;}
+function mkPr(vs,fs){const p=gl.createProgram();gl.attachShader(p,mkSh(gl.VERTEX_SHADER,vs));gl.attachShader(p,mkSh(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);return p;}
+const partProg=mkPr(vPart,fPart),lineProg=mkPr(vLine,fLine);
+const partVAO=gl.createVertexArray(),posVBO=gl.createBuffer(),colVBO=gl.createBuffer();
+gl.bindVertexArray(partVAO);gl.bindBuffer(gl.ARRAY_BUFFER,posVBO);gl.vertexAttribPointer(0,3,gl.FLOAT,false,12,0);gl.enableVertexAttribArray(0);gl.bindBuffer(gl.ARRAY_BUFFER,colVBO);gl.vertexAttribPointer(1,4,gl.FLOAT,false,16,0);gl.enableVertexAttribArray(1);
+const lineVAO=gl.createVertexArray(),lineVBO=gl.createBuffer();
+gl.bindVertexArray(lineVAO);gl.bindBuffer(gl.ARRAY_BUFFER,lineVBO);gl.vertexAttribPointer(0,3,gl.FLOAT,false,12,0);gl.enableVertexAttribArray(0);
+gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.clearColor(0.024,0.031,0.063,1.0);
+function mulM(a,b){const o=new Float32Array(16);for(let r=0;r<4;r++)for(let c=0;c<4;c++)for(let k=0;k<4;k++)o[c*4+r]+=a[k*4+r]*b[c*4+k];return o;}
+function perspective(fov,asp,n,f){const t=1/Math.tan(fov/2),o=new Float32Array(16);o[0]=t/asp;o[5]=t;o[10]=(f+n)/(n-f);o[11]=-1;o[14]=(2*f*n)/(n-f);return o;}
+function lookAt(eye,ctr,up){const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];const norm=a=>{const l=Math.hypot(...a)||1;return a.map(v=>v/l);};const f=norm(sub(ctr,eye)),s=norm(cross(f,up)),u=cross(s,f);const o=new Float32Array(16);o[0]=s[0];o[4]=s[1];o[8]=s[2];o[12]=-dot(s,eye);o[1]=u[0];o[5]=u[1];o[9]=u[2];o[13]=-dot(u,eye);o[2]=-f[0];o[6]=-f[1];o[10]=-f[2];o[14]=dot(f,eye);o[15]=1;return o;}
+function makeTrans(tx,ty,tz){const T=new Float32Array(16);T[0]=T[5]=T[10]=T[15]=1;T[12]=tx;T[13]=ty;T[14]=tz;return T;}
+
+let camDist=80,camYaw=40,camPitch=25;
+let dragging=false,lastX=0,lastY=0;
+let pinching=false,pinchStartDist=0,pinchStartCamDist=80;
+let tapStartX=0,tapStartY=0,tapMoved=false;
+const zoomIndicator=document.getElementById('zoom-indicator');
+let zoomFadeTimer=null;
+function showZoomIndicator(){const mult=(80/camDist).toFixed(1);zoomIndicator.textContent=`× ${mult}`;zoomIndicator.style.opacity='1';clearTimeout(zoomFadeTimer);zoomFadeTimer=setTimeout(()=>{zoomIndicator.style.opacity='0';},1000);}
+canvas.addEventListener('mousedown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;e.preventDefault();});
+window.addEventListener('mouseup',()=>dragging=false);
+window.addEventListener('mousemove',e=>{if(!dragging)return;camYaw+=(e.clientX-lastX)*0.35;camPitch+=(e.clientY-lastY)*0.35;camPitch=Math.max(-89,Math.min(89,camPitch));lastX=e.clientX;lastY=e.clientY;});
+canvas.addEventListener('wheel',e=>{e.preventDefault();camDist-=e.deltaY*0.04*(camDist*0.04+1);camDist=Math.max(3,Math.min(600,camDist));showZoomIndicator();updateZoomSlider();},{passive:false});
+canvas.addEventListener('touchstart',e=>{if(e.touches.length===1){dragging=true;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;tapStartX=e.touches[0].clientX;tapStartY=e.touches[0].clientY;tapMoved=false;}else if(e.touches.length===2){dragging=false;pinching=true;tapMoved=true;const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;pinchStartDist=Math.sqrt(dx*dx+dy*dy);pinchStartCamDist=camDist;hideTooltip();}e.preventDefault();},{passive:false});
+canvas.addEventListener('touchend',e=>{if(e.touches.length<2)pinching=false;if(e.touches.length===0){dragging=false;if(!tapMoved&&e.changedTouches.length>0){const t=e.changedTouches[0];const hit=findHoveredParticle(t.clientX,t.clientY);if(hit){showTooltipForKey(hit.key,t.clientX,t.clientY);}else hideTooltip();}}},{passive:true});
+canvas.addEventListener('touchmove',e=>{if(e.touches.length===2&&pinching){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;const dist=Math.sqrt(dx*dx+dy*dy);camDist=Math.max(3,Math.min(600,pinchStartCamDist*pinchStartDist/dist));showZoomIndicator();updateZoomSlider();tapMoved=true;}else if(e.touches.length===1&&dragging&&!pinching){const cx=e.touches[0].clientX,cy=e.touches[0].clientY;camYaw+=(cx-lastX)*0.35;camPitch+=(cy-lastY)*0.35;camPitch=Math.max(-89,Math.min(89,camPitch));lastX=cx;lastY=cy;const ddx=cx-tapStartX,ddy=cy-tapStartY;if(Math.sqrt(ddx*ddx+ddy*ddy)>8)tapMoved=true;}e.preventDefault();},{passive:false});
+
+const tip=document.getElementById('particleTooltip');
+let tooltipVisible=false;
+function getActiveCandidates(){let candidates=[];if(hadronMode){hadronParticles.filter(p=>!p.lifeMax||(p.life<p.lifeMax)).forEach(p=>{candidates.push({key:p.key,x:p.x,y:p.y,z:p.z});});mesonParticles.filter(m=>!m.dead).forEach(m=>{const t=m.progress;const x=m.x+(m.dstX-m.x)*t,y=m.y+(m.dstY-m.y)*t,z=m.z+(m.dstZ-m.z)*t;candidates.push({key:m.key,x,y,z});});}else if(decayMode==='spontaneous_fission'){fissionDaughters.filter(d=>Math.hypot(d.x,d.y,d.z)<200).forEach(d=>{candidates.push({key:d.key||'frag',x:d.x,y:d.y,z:d.z});});fissionNeutrons.filter(n=>!n.dead).forEach(n=>{candidates.push({key:'n',x:n.x,y:n.y,z:n.z});});fissionGammas.filter(g=>!g.dead&&fissionClock>=g.bornAt).forEach(g=>{candidates.push({key:'γ',x:g.x,y:g.y,z:g.z});});}else if(decayMode){decayParticles.filter(p=>!p.dead&&p.hasStarted).forEach(p=>{candidates.push({key:p.physKey||p.key,x:p.x,y:p.y,z:p.z});});}return candidates;}
+function getEye(){const yr=camYaw*Math.PI/180,pr=camPitch*Math.PI/180;return[camDist*Math.cos(pr)*Math.sin(yr),camDist*Math.sin(pr),camDist*Math.cos(pr)*Math.cos(yr)];}
+function project3D(x,y,z,mvp){const w=mvp[3]*x+mvp[7]*y+mvp[11]*z+mvp[15];return[(mvp[0]*x+mvp[4]*y+mvp[8]*z+mvp[12])/w,(mvp[1]*x+mvp[5]*y+mvp[9]*z+mvp[13])/w];}
+function findHoveredParticle(clientX,clientY){const candidates=getActiveCandidates();if(candidates.length===0)return null;const rect=canvas.getBoundingClientRect();const mx=((clientX-rect.left)/rect.width)*2-1;const my=-((clientY-rect.top)/rect.height)*2+1;const eye=getEye(),view=lookAt(eye,[0,0,0],[0,1,0]);const proj=perspective(45*Math.PI/180,canvas.width/canvas.height,0.1,5000);const mvp=mulM(proj,view);let best=null,bestDist=0.14;candidates.forEach(c=>{const[sx,sy]=project3D(c.x,c.y,c.z,mvp);const d=Math.sqrt((sx-mx)**2+(sy-my)**2);if(d<bestDist){bestDist=d;best=c;}});return best;}
+function showTooltipForKey(key,clientX,clientY){const info=PARTICLE_INFO[key];if(!info){hideTooltip();return;}document.getElementById('ptName').textContent=info.name;document.getElementById('ptSubtitle').textContent=info.subtitle||'particle';document.getElementById('ptSym').textContent=info.sym;document.getElementById('ptDesc').textContent=info.desc;document.getElementById('ptCharge').textContent=info.charge;document.getElementById('ptSpin').textContent=info.spin;document.getElementById('ptMass').textContent=info.mass;document.getElementById('ptLifetime').textContent=info.lifetime;const wr=document.getElementById('canvas-wrap').getBoundingClientRect();let tx=clientX-wr.left+18,ty=clientY-wr.top+18;if(tx+240>wr.width-8)tx=clientX-wr.left-248;if(ty+230>wr.height-8)ty=clientY-wr.top-230;if(tx<4)tx=4;if(ty<4)ty=4;tip.style.left=tx+'px';tip.style.top=ty+'px';tip.style.display='block';tooltipVisible=true;}
+function hideTooltip(){tip.style.display='none';tooltipVisible=false;}
+canvas.addEventListener('mousemove',e=>{if(dragging)return;const hit=findHoveredParticle(e.clientX,e.clientY);if(hit){showTooltipForKey(hit.key,e.clientX,e.clientY);}else hideTooltip();});
+canvas.addEventListener('mouseleave',()=>hideTooltip());
+function updateZoomSlider(){document.getElementById('sZoom').value=camDist;document.getElementById('vZoom').textContent=(80/camDist).toFixed(1)+'×';}
+function setTapHint(show){document.getElementById('tapHint').textContent=show?'hover over particles for info':'';}
+
+const gridVerts=(()=>{const G=60,step=10,v=[];for(let i=-G;i<=G;i+=step){v.push(-G,0,i,G,0,i,i,0,-G,i,0,G);}return new Float32Array(v);})();
+function buildSphereLines(r,lat=14,lon=18){const v=[];for(let la=1;la<lat;la++){const phi=la/lat*Math.PI;const y=r*Math.cos(phi);const rr=r*Math.sin(phi);for(let lo=0;lo<lon;lo++){const a0=lo/lon*Math.PI*2;const a1=(lo+1)/lon*Math.PI*2;v.push(rr*Math.cos(a0),y,rr*Math.sin(a0),rr*Math.cos(a1),y,rr*Math.sin(a1));}}const nM=7;for(let lo=0;lo<nM;lo++){const az=lo/nM*Math.PI*2;for(let la=0;la<lat;la++){const phi0=la/lat*Math.PI;const phi1=(la+1)/lat*Math.PI;v.push(r*Math.sin(phi0)*Math.cos(az),r*Math.cos(phi0),r*Math.sin(phi0)*Math.sin(az),r*Math.sin(phi1)*Math.cos(az),r*Math.cos(phi1),r*Math.sin(phi1)*Math.sin(az));}}return new Float32Array(v);}
+function buildBohrRings(){const v=[],done=new Set();bohrElectrons.forEach(be=>{if(done.has(be.n))return;done.add(be.n);const N=64;for(let i=0;i<N;i++){const a0=i/N*Math.PI*2,a1=(i+1)/N*Math.PI*2;v.push(be.orbitR*Math.cos(a0),0,be.orbitR*Math.sin(a0),be.orbitR*Math.cos(a1),0,be.orbitR*Math.sin(a1));}});return new Float32Array(v);}
+function getNucR(){
+  const A=Math.max(1,Math.round(currentEl.z*2));
+  const baseVisualR=0.045;
+  const magnification=nucScaleT>0.001?Math.pow(50,nucScaleT):1.0;
+  return baseVisualR*magnification;
+}
+function getCompoundNucR(Z){let A=Z===1?1:Z*2;return 0.05*Math.pow(A,1/3)*(1+nucScaleT*2.0);}
+function buildColorString(x1,y1,z1,x2,y2,z2,wobble,wobbleFreq,progress){const segs=16;const verts=[];const dx=x2-x1,dy=y2-y1,dz=z2-z1;const len=Math.sqrt(dx*dx+dy*dy+dz*dz)+0.001;let px=-dy/len,py=dx/len,pz=0;const plen=Math.sqrt(px*px+py*py+pz*pz)||1;px/=plen;py/=plen;pz/=plen;const qx=dy*pz-dz*py,qy=dz*px-dx*pz,qz=dx*py-dy*px;const qlen=Math.sqrt(qx*qx+qy*qy+qz*qz)||1;const qxn=qx/qlen,qyn=qy/qlen,qzn=qz/qlen;const endT=Math.min(progress,1.0);for(let i=0;i<segs;i++){const t0=i/segs*endT,t1=(i+1)/segs*endT;const w0=Math.sin(t0*Math.PI*wobbleFreq+wobble)*2.0*Math.sin(t0*Math.PI);const w1=Math.sin(t1*Math.PI*wobbleFreq+wobble)*2.0*Math.sin(t1*Math.PI);const w0b=Math.cos(t0*Math.PI*(wobbleFreq*0.7)+wobble*1.3)*1.0*Math.sin(t0*Math.PI);const w1b=Math.cos(t1*Math.PI*(wobbleFreq*0.7)+wobble*1.3)*1.0*Math.sin(t1*Math.PI);verts.push(x1+dx*t0+px*w0+qxn*w0b,y1+dy*t0+py*w0+qyn*w0b,z1+dz*t0+pz*w0+qzn*w0b,x1+dx*t1+px*w1+qxn*w1b,y1+dy*t1+py*w1+qyn*w1b,z1+dz*t1+pz*w1+qzn*w1b);}return new Float32Array(verts);}
+
+const lMVP=gl.getUniformLocation(lineProg,'uMVP'),lCol=gl.getUniformLocation(lineProg,'uColor');
+function drawLines(verts,mvp,r,g,b,a){if(!verts||verts.length===0)return;gl.bindVertexArray(lineVAO);gl.bindBuffer(gl.ARRAY_BUFFER,lineVBO);gl.bufferData(gl.ARRAY_BUFFER,verts instanceof Float32Array?verts:new Float32Array(verts),gl.DYNAMIC_DRAW);gl.useProgram(lineProg);gl.uniformMatrix4fv(lMVP,false,mvp);gl.uniform4f(lCol,r,g,b,a);gl.drawArrays(gl.LINES,0,verts.length/3);}
+const pMVP=gl.getUniformLocation(partProg,'uMVP'),pSz=gl.getUniformLocation(partProg,'uPtSz');
+function drawPoints(posArr,colArr,count,mvp,ptSz){if(count===0)return;gl.bindVertexArray(partVAO);gl.bindBuffer(gl.ARRAY_BUFFER,posVBO);gl.bufferData(gl.ARRAY_BUFFER,posArr.subarray?posArr.subarray(0,count*3):new Float32Array(posArr),gl.DYNAMIC_DRAW);gl.bindBuffer(gl.ARRAY_BUFFER,colVBO);gl.bufferData(gl.ARRAY_BUFFER,colArr.subarray?colArr.subarray(0,count*4):new Float32Array(colArr),gl.DYNAMIC_DRAW);gl.useProgram(partProg);gl.uniformMatrix4fv(pMVP,false,mvp);gl.uniform1f(pSz,ptSz);gl.drawArrays(gl.POINTS,0,count);}
+
+const RESAMP=0.0015;
+function updateMotion(dt){
+  const effectiveDt=paused?0:dt;
+  if(hadronMode){if(!paused)updateHadron(dt);return;}
+  if(decayMode==='spontaneous_fission'){updateFission(effectiveDt);return;}
+  if(decayMode){updateNonFissionDecay(effectiveDt);return;}
+  if(compoundMode)return;
+  if(paused)return;
+  if(motionMode==='bohr'){bohrElectrons.forEach(be=>be.angle+=be.omega*motionSpeed*dt*1.5);return;}
+  if(motionMode==='static'||!positions||vertexCount===0)return;
+  const Zeff=currentEl.Zeff,spd=motionSpeed*dt*0.013;
+  for(let i=0;i<vertexCount;i++){const xi=i*3,ci=i*4;if(Math.random()<RESAMP){const r=sampleR(),theta=sampleTheta(),phi=Math.random()*2*Math.PI;const x=r*Math.sin(theta)*Math.cos(phi),y=r*Math.sin(theta)*Math.sin(phi),z=r*Math.cos(theta);if(sliceTest(x,y,z))continue;positions[xi]=x;positions[xi+1]=y;positions[xi+2]=z;const[vx,vy,vz]=pCurrent(x,y,z,N_qn,L_qn,M_qn,Zeff);velocities[xi]=vx;velocities[xi+1]=vy;velocities[xi+2]=vz;const[rc,gc,bc,ac]=hotColor(r,Zeff);colors[ci]=rc;colors[ci+1]=gc;colors[ci+2]=bc;colors[ci+3]=ac;continue;}let x=positions[xi],y=positions[xi+1],z=positions[xi+2];if(M_qn!==0){x+=velocities[xi]*spd;y+=velocities[xi+1]*spd;z+=velocities[xi+2]*spd;}const r=Math.sqrt(x*x+y*y+z*z)+1e-6;const rT=N_qn*N_qn*8/Math.max(Zeff,0.1),res=(r-rT)*0.0007*spd;x-=(x/r)*res;y-=(y/r)*res;z-=(z/r)*res;if(M_qn!==0&&Math.random()<0.02){const[vx,vy,vz]=pCurrent(x,y,z,N_qn,L_qn,M_qn,Zeff);velocities[xi]=vx;velocities[xi+1]=vy;velocities[xi+2]=vz;}positions[xi]=x;positions[xi+1]=y;positions[xi+2]=z;}
+}
+
+function resize(){const w=document.getElementById('canvas-wrap');canvas.width=w.clientWidth*(devicePixelRatio||1);canvas.height=w.clientHeight*(devicePixelRatio||1);}
+window.addEventListener('resize',resize);resize();
+function getElectronPtSz(){const t=elSizeT;if(t<0.33)return 0.3+(2.0-0.3)*(t/0.33);return 2.0+(9.0-2.0)*((t-0.33)/0.67);}
+
+let lastT=performance.now(),frames=0,prevT=performance.now();
+function render(now){
+  requestAnimationFrame(render);
+  const dt=Math.min((now-prevT)/1000,0.05);prevT=now;
+  frames++;if(now-lastT>600){document.getElementById('fps').textContent=Math.round(frames*1000/(now-lastT))+' FPS';frames=0;lastT=now;}
+  updateMotion(dt);
+  resize();gl.viewport(0,0,canvas.width,canvas.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  const eye=getEye(),view=lookAt(eye,[0,0,0],[0,1,0]);
+  const proj=perspective(45*Math.PI/180,canvas.width/canvas.height,0.1,5000);
+  const mvp=mulM(proj,view);
+
+  if(showGrid&&!hadronMode){drawLines(gridVerts,mvp,0.09,0.11,0.2,0.4);drawLines(new Float32Array([0,0,0,60,0,0]),mvp,1,0.25,0.25,0.7);drawLines(new Float32Array([0,0,0,0,60,0]),mvp,0.25,1,0.35,0.7);drawLines(new Float32Array([0,0,0,0,0,60]),mvp,0.25,0.5,1,0.7);}
+
+  if(hadronMode&&hadronParticles.length>0){
+    const nucleonRef=hadronParticles.find(p=>p.valence);const R=hadronMode==='nucleus'?(nucleonRef?.nucleonR||20):18;const sphereVerts=buildSphereLines(R*1.05);
+    if(hadronMode==='proton')drawLines(sphereVerts,mvp,0.3,0.1,0.1,0.22);else if(hadronMode==='neutron')drawLines(sphereVerts,mvp,0.1,0.1,0.4,0.22);else drawLines(sphereVerts,mvp,0.2,0.15,0.1,0.18);
+    const vq=hadronParticles.filter(p=>p.valence);
+    if(hadronMode==='proton'||hadronMode==='neutron'){
+      for(let i=0;i<vq.length;i++){for(let j=i+1;j<vq.length;j++){const q1=vq[i],q2=vq[j];const c1=QCD_COLORS[q1.colorCharge]||{r:0.5,g:0.5,b:0.5};const c2=QCD_COLORS[q2.colorCharge]||{r:0.5,g:0.5,b:0.5};const wobblePhase=now*0.0025+i*1.3+j*0.9;const sv=buildColorString(q1.x,q1.y,q1.z,q2.x,q2.y,q2.z,wobblePhase,3+i+j,1.0);drawLines(sv,mvp,(c1.r+c2.r)*0.48,(c1.g+c2.g)*0.48,(c1.b+c2.b)*0.48,0.65);}}
+      colorStringGluons.filter(g=>!g.dead).forEach(g=>{const src=vq[g.srcIdx],dst=vq[g.dstIdx];if(!src||!dst)return;const t=g.progress;const gx=src.x+(dst.x-src.x)*t,gy=src.y+(dst.y-src.y)*t,gz=src.z+(dst.z-src.z)*t;const wobPhase=now*0.003+g.srcIdx+g.dstIdx;const partialStr=buildColorString(src.x,src.y,src.z,dst.x,dst.y,dst.z,wobPhase,4,t);drawLines(partialStr,mvp,g.r,g.g,g.b,0.9);drawPoints(new Float32Array([gx,gy,gz]),new Float32Array([g.r,g.g,g.b,1.0]),1,mvp,14);});
+      if(flavorExchangeActive&&flavorExchangeData){const q=flavorExchangeData.quark,partner=flavorExchangeData.partner;if(partner){const progress=flavorExchangeData.age/flavorExchangeData.duration;const pulse=0.5+0.5*Math.sin(progress*Math.PI*6);const alpha=Math.sin(progress*Math.PI)*0.9;const fStr=buildColorString(q.x,q.y,q.z,partner.x,partner.y,partner.z,now*0.008,6,1.0);drawLines(fStr,mvp,0.85*pulse,0.2*pulse,1.0*pulse,alpha*0.85);const mx2=(q.x+partner.x)*0.5,my2=(q.y+partner.y)*0.5,mz2=(q.z+partner.z)*0.5;drawPoints(new Float32Array([mx2,my2,mz2]),new Float32Array([0.85*pulse,0.2*pulse,1.0*pulse,alpha*0.9]),1,mvp,16);}}
+    } else if(hadronMode==='nucleus'){
+      for(let i=0;i<Math.min(vq.length,40);i++){for(let j=i+1;j<Math.min(vq.length,40);j++){const q1=vq[i],q2=vq[j];const dx=q2.x-q1.x,dy=q2.y-q1.y,dz=q2.z-q1.z;const dist=Math.sqrt(dx*dx+dy*dy+dz*dz);if(dist<R*0.55){const alpha=Math.max(0,(1-dist/(R*0.55))*0.42);const wobblePhase=now*0.002+i*0.7+j*0.5;const tv=buildColorString(q1.x,q1.y,q1.z,q2.x,q2.y,q2.z,wobblePhase,3,1.0);const isProtonPair=q1.type==='proton'&&q2.type==='proton';const isNeutronPair=q1.type==='neutron'&&q2.type==='neutron';drawLines(tv,mvp,isProtonPair?0.9:isNeutronPair?0.1:0.5,isProtonPair?0.15:isNeutronPair?0.2:0.8,isProtonPair?0.1:isNeutronPair?0.9:0.3,alpha);}}}
+      if(mesonParticles.length>0){const mp=new Float32Array(mesonParticles.length*3);const mc=new Float32Array(mesonParticles.length*4);let cnt=0;mesonParticles.filter(m=>!m.dead).forEach((m,idx)=>{const t=m.progress;const x=m.x+(m.dstX-m.x)*t,y=m.y+(m.dstY-m.y)*t,z=m.z+(m.dstZ-m.z)*t;const fade=Math.sin(m.progress*Math.PI)*0.9+0.1;mp[cnt*3]=x;mp[cnt*3+1]=y;mp[cnt*3+2]=z;mc[cnt*4]=m.r;mc[cnt*4+1]=m.g;mc[cnt*4+2]=m.b;mc[cnt*4+3]=fade;cnt++;});if(cnt>0)drawPoints(mp,mc,cnt,mvp,7);}
+    }
+    const pp=new Float32Array(hadronParticles.length*3),pc=new Float32Array(hadronParticles.length*4);hadronParticles.forEach((p,i)=>{pp[i*3]=p.x;pp[i*3+1]=p.y;pp[i*3+2]=p.z;const fade=p.lifeMax?Math.max(0.2,1-p.life/p.lifeMax*0.7):1;const pulse=p.valence?(0.8+0.2*Math.sin(p.phase)):0.7;pc[i*4]=p.r*pulse;pc[i*4+1]=p.g*pulse;pc[i*4+2]=p.b*pulse;pc[i*4+3]=(p.type==='gluon'?0.65:0.95)*fade;});
+    drawPoints(pp,pc,hadronParticles.length,mvp,hadronMode==='nucleus'?3.5:5);return;
+  }
+
+  if(decayMode==='spontaneous_fission'){
+    if(decayParentNucleus.alpha>0.01){const pulse=0.85+0.15*Math.sin(fissionClock*8);drawLines(buildSphereLines(3.8),mvp,1*pulse,0.75*pulse,0.2*pulse,decayParentNucleus.alpha*0.9);}
+    fissionDaughters.forEach(d=>{const dist=Math.hypot(d.x,d.y,d.z);if(dist>200)return;const T=makeTrans(d.x,d.y,d.z);drawLines(buildSphereLines(d.radius),mulM(mvp,T),d.r,d.g,d.b,d.alpha*0.92);if(d.elCloud&&d.elCount>0){const pp=new Float32Array(d.elCount*3);const pc=new Float32Array(d.elCount*4);for(let i=0;i<d.elCount;i++){pp[i*3]=d.x+d.elCloud[i*3]*0.72;pp[i*3+1]=d.y+d.elCloud[i*3+1]*0.72;pp[i*3+2]=d.z+d.elCloud[i*3+2]*0.72;const ex=d.elCloud[i*3],ey=d.elCloud[i*3+1],ez=d.elCloud[i*3+2];const rLocal=Math.sqrt(ex*ex+ey*ey+ez*ez);const t2=1-Math.min(rLocal/3,1);pc[i*4]=0.2+t2*0.8;pc[i*4+1]=d.isAlpha?0.3:0.4+t2*0.3;pc[i*4+2]=d.isAlpha?0.1:0.8-t2*0.3;pc[i*4+3]=0.12+t2*0.25;}drawPoints(pp,pc,d.elCount,mvp,1.5);}});
+    fissionNeutrons.filter(n=>!n.dead).forEach(n=>{if(n.trail.length>=2){const tv=[];for(let i=0;i<n.trail.length-1;i++)tv.push(...n.trail[i],...n.trail[i+1]);drawLines(new Float32Array(tv),mvp,0.7,0.7,0.7,0.35);}drawPoints(new Float32Array([n.x,n.y,n.z]),new Float32Array([0.75,0.75,0.75,0.95]),1,mvp,6);});
+    fissionGammas.filter(g=>!g.dead&&fissionClock>=g.bornAt).forEach(g=>{if(g.trail.length>=2){const tv=[];for(let i=0;i<g.trail.length-1;i++)tv.push(...g.trail[i],...g.trail[i+1]);drawLines(new Float32Array(tv),mvp,1,1,0.3,0.4);}drawPoints(new Float32Array([g.x,g.y,g.z]),new Float32Array([1,1,0.3,0.9]),1,mvp,7);});
+    return;
+  }
+
+  if(decayMode){
+    if(showNucleusMarker){if(decayParentNucleus.alpha>0.01){const pulse=0.85+0.15*Math.sin(decayClock*6);drawLines(buildSphereLines(3.5),mvp,decayParentNucleus.r*pulse,decayParentNucleus.g*pulse,decayParentNucleus.b*0.3,decayParentNucleus.alpha*0.9);}if(decayDaughterNucleus.visible&&decayDaughterNucleus.alpha>0.01){const Y=decayParticles.find(p=>p.physKey==='Υ'&&!p.dead);if(Y){drawLines(buildSphereLines(2.8),mulM(mvp,makeTrans(Y.x,Y.y,Y.z)),decayDaughterNucleus.r,decayDaughterNucleus.g,decayDaughterNucleus.b,decayDaughterNucleus.alpha*0.95);}}}
+    if(positions&&vertexCount>0)drawPoints(positions,colors,vertexCount,mvp,getElectronPtSz());
+    const live=decayParticles.filter(p=>!p.dead&&p.hasStarted);
+    if(live.length>0){const bosons=live.filter(p=>p.isBoson),others=live.filter(p=>!p.isBoson);if(bosons.length>0){const bp=new Float32Array(bosons.length*3),bc=new Float32Array(bosons.length*4);bosons.forEach((p,i)=>{bp[i*3]=p.x;bp[i*3+1]=p.y;bp[i*3+2]=p.z;const fade=Math.max(0.05,1-p.animAge/p.animLife);const pulse=0.8+0.2*Math.sin(decayClock*15);bc[i*4]=p.color[0]*pulse;bc[i*4+1]=p.color[1]*pulse;bc[i*4+2]=p.color[2]*pulse;bc[i*4+3]=fade;});drawPoints(bp,bc,bosons.length,mvp,20);}if(others.length>0){const op=new Float32Array(others.length*3),oc=new Float32Array(others.length*4);others.forEach((p,i)=>{op[i*3]=p.x;op[i*3+1]=p.y;op[i*3+2]=p.z;oc[i*4]=p.color[0];oc[i*4+1]=p.color[1];oc[i*4+2]=p.color[2];oc[i*4+3]=1;});drawPoints(op,oc,others.length,mvp,9);}live.filter(p=>!p.isBoson).forEach(p=>{if(p.trail.length<2)return;const tv=[];for(let i=0;i<p.trail.length-1;i++){tv.push(...p.trail[i],...p.trail[i+1]);}drawLines(new Float32Array(tv),mvp,p.color[0],p.color[1],p.color[2],0.4);});}
+    return;
+  }
+
+  if(showNucleusMarker){if(compoundMode&&CMP_DB[compoundMode]){CMP_DB[compoundMode].atoms.forEach(at=>{drawLines(buildSphereLines(getCompoundNucR(at.Z)),mulM(mvp,makeTrans(at.pos[0],at.pos[1],at.pos[2])),at.c[0],at.c[1],at.c[2],0.9);});}else{drawLines(buildSphereLines(getNucR()),mvp,1,0.75,0.2,0.9);}}
+  if(showBohrRing&&motionMode==='bohr'&&!compoundMode){const rv=buildBohrRings();if(rv.length)drawLines(rv,mvp,0.2,0.38,0.7,0.22);}
+  if(positions&&vertexCount>0&&motionMode!=='bohr')drawPoints(positions,colors,vertexCount,mvp,getElectronPtSz());
+  if(motionMode==='bohr'&&!compoundMode&&bohrElectrons.length>0){const alive=bohrElectrons.filter(be=>{const[bx,by,bz]=bohrElectronPos(be);return!sliceTest(bx,by,bz);});if(alive.length>0){const bPos=new Float32Array(alive.length*3),bCol=new Float32Array(alive.length*4);alive.forEach((be,i)=>{const[bx,by,bz]=bohrElectronPos(be);bPos[i*3]=bx;bPos[i*3+1]=by;bPos[i*3+2]=bz;const t=be.n/7;bCol[i*4]=1-t*0.55;bCol[i*4+1]=0.4+t*0.45;bCol[i*4+2]=0.2+t*0.7;bCol[i*4+3]=1;});drawPoints(bPos,bCol,alive.length,mvp,getElectronPtSz()*2.0);}}
+}
+requestAnimationFrame(render);
+
+function triggerRegen(){
+  if(computing)return;computing=true;
+  clearTimeout(fissionRestartTimer);fissionRestartTimer=null;
+  fissionDaughters=[];fissionNeutrons=[];fissionGammas=[];
+  colorStringGluons=[];mesonParticles=[];mesonTimer=0;
+  flavorExchangeActive=false;flavorExchangeData=null;colorExchangeTimer=0;flavorExchangeTimer=0;
+  hideTooltip();document.getElementById('loading').classList.remove('hidden');
+  setTimeout(()=>{generateParticles();document.getElementById('loading').classList.add('hidden');computing=false;updateLabels();},30);
+}
+function updateLabels(){
+  if(hadronMode){const names={proton:'Proton (uud)',neutron:'Neutron (udd)',nucleus:'Nucleus'};document.getElementById('qnLabel').textContent='QCD';document.getElementById('elLabel').textContent=names[hadronMode]||hadronMode;setTapHint(true);return;}
+  if(decayMode){const d=DECAY_TYPES.find(x=>x.id===decayMode);document.getElementById('qnLabel').textContent='decay';document.getElementById('elLabel').textContent=d?d.name.slice(0,18):'';setTapHint(true);return;}
+  if(compoundMode){document.getElementById('qnLabel').textContent='MO';document.getElementById('elLabel').textContent=compoundMode;setTapHint(false);return;}
+  setTapHint(false);const nm=['s','p','d','f'];
+  document.getElementById('qnLabel').textContent=`n=${N_qn} l=${L_qn} m=${M_qn}`;document.getElementById('elLabel').textContent=`${currentEl.sym} · ${currentEl.name}`;
+  document.getElementById('iOrbName').textContent=`${N_qn}${nm[L_qn]||'?'}`;document.getElementById('iShell').textContent=['','K','L','M','N','O','P','Q'][N_qn]||'?';
+  const E=(-13.6058*currentEl.Zeff*currentEl.Zeff/(N_qn*N_qn)).toFixed(2);document.getElementById('iEnergy').textContent=`${E} eV (C-R approx.)`;document.getElementById('iZeff').textContent=currentEl.Zeff.toFixed(3);
+  // Nucleus magnification label + scientific note
+  let displayMag = 1;
+  if (nucScaleT > 0.001) {
+  displayMag = Math.pow(10000, nucScaleT);
+  }
+    document.getElementById('vNucScale').textContent = 
+        nucScaleT < 0.01 ? 'real (1×)' : displayMag.toFixed(0) + '×';
+
+    document.getElementById('scaleNote').innerHTML = 
+        nucScaleT < 0.01 
+        ? 'Real nucleus:atom ≈ 1:100,000.<br>R = r₀ A<sup>1/3</sup> (r₀ ≈ 1.25 fm)<br>Atom ~10<sup>−10</sup> m | Nucleus ~10<sup>−15</sup> m'
+        : `Nucleus magnified <strong>${displayMag.toFixed(0)}×</strong><br>Real scale = 1×`;
+  const es=elSizeT;document.getElementById('vElSize').textContent=es<0.1?'point':es<0.4?'study':es<0.75?'large':'max';document.getElementById('elSizeNote').textContent=es<0.1?'Real e⁻ point-like (<10⁻¹⁸ m).':es<0.4?'Study size.':es<0.75?'Large.':'Maximum.';
+}
+triggerRegen();
+
+function clampQN(){L_qn=Math.min(L_qn,N_qn-1);M_qn=Math.max(-L_qn,Math.min(L_qn,M_qn));const sl=document.getElementById('sl'),sm=document.getElementById('sm');sl.max=N_qn-1;sl.value=L_qn;sm.min=-L_qn;sm.max=L_qn;sm.value=M_qn;document.getElementById('vl').textContent=L_qn;document.getElementById('vm').textContent=M_qn;}
+function bind(id,valId,setter,fmt,regen=true){const el=document.getElementById(id),vl=valId?document.getElementById(valId):null;el.addEventListener('input',()=>{setter(+el.value);if(vl)vl.textContent=fmt?fmt(+el.value):el.value;clampQN();});if(regen)el.addEventListener('change',()=>triggerRegen());}
+bind('sn','vn',v=>{N_qn=v;compoundMode=null;decayMode=null;hadronMode=null;});
+bind('sl','vl',v=>{L_qn=v;compoundMode=null;decayMode=null;hadronMode=null;});
+bind('sm','vm',v=>{M_qn=v;compoundMode=null;decayMode=null;hadronMode=null;});
+bind('sps','vps',v=>{pointSize=v;},v=>v.toFixed(1),false);
+bind('spc','vpc',v=>{particleCount=v;},v=>Math.round(v/1000)+'k');
+bind('sspd','vspd',v=>{motionSpeed=v;},v=>v.toFixed(1)+'×',false);
+bind('saxis','vaxis',v=>{sliceAxis=v;},v=>['X','Y','Z'][v],false);
+bind('ssdepth','vsdepth',v=>{sliceDepth=v;},null,false);
+document.getElementById('saxis').addEventListener('change',()=>triggerRegen());
+document.getElementById('ssdepth').addEventListener('change',()=>triggerRegen());
+['x','y','z'].forEach(ax=>{const sl=document.getElementById('s'+ax+'c'),val=document.getElementById('v'+ax+'c');sl.addEventListener('input',()=>{const v=+sl.value;if(ax==='x')xClip=v;else if(ax==='y')yClip=v;else zClip=v;val.textContent=v===0?'off':v;});sl.addEventListener('change',()=>triggerRegen());});
+document.getElementById('sNucScale').addEventListener('input',e=>{nucScaleT=+e.target.value/100;updateLabels();});
+document.getElementById('sElSize').addEventListener('input',e=>{elSizeT=+e.target.value/100;updateLabels();});
+document.getElementById('sDecSpd').addEventListener('input',e=>{decaySpeedMult=+e.target.value;document.getElementById('vDecSpd').textContent=decaySpeedMult+'×';});
+document.getElementById('sZoom').addEventListener('input',e=>{camDist=+e.target.value;document.getElementById('vZoom').textContent=(80/camDist).toFixed(1)+'×';showZoomIndicator();});
+document.getElementById('btnResetCamera').addEventListener('click',()=>{camDist=80;camYaw=40;camPitch=25;updateZoomSlider();});
+['Orbital','Bohr','Static'].forEach(name=>{document.getElementById('m'+name).addEventListener('click',()=>{motionMode=name.toLowerCase();document.querySelectorAll('.mmode').forEach(b=>b.classList.remove('active'));document.getElementById('m'+name).classList.add('active');compoundMode=null;decayMode=null;hadronMode=null;if(motionMode==='bohr')setupBohrElectrons();triggerRegen();});});
+const vMap={vFull:'full',vHalf:'half',vQuad:'quad',vSlab:'slab'};
+Object.entries(vMap).forEach(([id,mode])=>{document.getElementById(id).addEventListener('click',()=>{viewMode=mode;document.querySelectorAll('.vmode').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');triggerRegen();});});
+function mkToggle(btnId,pillId,g,s){const btn=document.getElementById(btnId),pill=document.getElementById(pillId);btn.addEventListener('click',()=>{s(!g());const on=g();btn.classList.toggle('active',on);pill.classList.toggle('on',on);pill.textContent=on?'ON':'OFF';});}
+mkToggle('btnGrid','gridPill',()=>showGrid,v=>{showGrid=v;});
+mkToggle('btnShowNucleus','nucleusPill',()=>showNucleusMarker,v=>{showNucleusMarker=v;});
+mkToggle('btnBohrRing','bohrRingPill',()=>showBohrRing,v=>{showBohrRing=v;});
+document.getElementById('btnRegen').addEventListener('click',triggerRegen);
+document.getElementById('btnPause').addEventListener('click',()=>{paused=!paused;const btn=document.getElementById('btnPause');btn.textContent=paused?'▶':'⏸';btn.classList.toggle('paused',paused);if(paused){clearTimeout(fissionRestartTimer);fissionRestartTimer=null;}else if(decayMode==='spontaneous_fission'){fissionRestartTimer=setTimeout(()=>{if(decayMode==='spontaneous_fission'&&!paused)generateFission();},12000);}});
+
+document.getElementById('btnElement2').addEventListener('click',()=>{renderElGrid();openModal('elModal');});
+document.getElementById('btnCompound2').addEventListener('click',()=>{renderCmpGrid();openModal('cmpModal');});
+document.getElementById('btnDecay2').addEventListener('click',()=>{renderDecayGrid();openModal('decayModal');});
+document.getElementById('btnProton2').addEventListener('click',()=>{hadronMode='proton';compoundMode=null;decayMode=null;positions=null;vertexCount=0;camDist=50;triggerRegen();});
+document.getElementById('btnNeutron2').addEventListener('click',()=>{hadronMode='neutron';compoundMode=null;decayMode=null;positions=null;vertexCount=0;camDist=50;triggerRegen();});
+document.getElementById('btnNucleus2').addEventListener('click',()=>{hadronMode='nucleus';compoundMode=null;decayMode=null;positions=null;vertexCount=0;camDist=70;triggerRegen();});
+document.getElementById('btnU2382').addEventListener('click',()=>{renderU238Chain();});
+document.getElementById('btnNuclideMap2').addEventListener('click',()=>{renderNuclideMap();});
+
+function renderElGrid(filter=''){const grid=document.getElementById('elGrid');grid.innerHTML='';const f=filter.toLowerCase();ELEMENTS.filter(e=>!f||e.name.toLowerCase().includes(f)||e.sym.toLowerCase().includes(f)||String(e.z).includes(f)).forEach(el=>{const card=document.createElement('div');card.className=`el-card ${el.cat}${el===currentEl?' active':''}`;card.innerHTML=`<div class="z">${el.z}</div><div class="sym">${el.sym}</div><div class="nm">${el.name.slice(0,10)}</div>`;card.addEventListener('click',()=>{currentEl=el;compoundMode=null;decayMode=null;hadronMode=null;const o=outerOrbital(el);N_qn=o.n;L_qn=o.l;M_qn=o.m;clampQN();['sn','sl','sm'].forEach((id,i)=>{document.getElementById(id).value=[N_qn,L_qn,M_qn][i];});document.getElementById('vn').textContent=N_qn;closeModal('elModal');triggerRegen();});grid.appendChild(card);});}
+document.getElementById('btnCloseEl').addEventListener('click',()=>closeModal('elModal'));
+document.getElementById('elSearch').addEventListener('input',e=>renderElGrid(e.target.value));
+function renderCmpGrid(filter=''){const grid=document.getElementById('cmpGrid');grid.innerHTML='';const f=filter.toLowerCase();PRESET_CMPS.filter(k=>{const c=CMP_DB[k];return c&&(k.toLowerCase().includes(f)||c.name.toLowerCase().includes(f)||!f);}).forEach(key=>{const c=CMP_DB[key];if(!c)return;const card=document.createElement('div');card.className=`cmp-card${c.possible?'':' impossible'}${compoundMode===key?' active':''}`;card.innerHTML=`<div class="cf">${key}</div><div class="cn">${c.name}</div>`;card.addEventListener('click',()=>{compoundMode=key;decayMode=null;hadronMode=null;closeModal('cmpModal');triggerRegen();});grid.appendChild(card);});}
+document.getElementById('btnCloseCmp').addEventListener('click',()=>closeModal('cmpModal'));
+document.getElementById('cmpInput').addEventListener('input',e=>renderCmpGrid(e.target.value));
+function renderDecayGrid(){const grid=document.getElementById('decayGrid');grid.innerHTML='';DECAY_TYPES.forEach(d=>{const card=document.createElement('div');card.className=`decay-card${decayMode===d.id?' active':''}`;card.innerHTML=`<div class="dt">${d.name}</div><div class="dn">${d.parentSym} → ${d.daughterSym||'fragments'}</div><div class="dd">${d.desc}</div><div class="deq">${d.eq}</div>`;card.addEventListener('click',()=>{decayMode=d.id;compoundMode=null;hadronMode=null;document.querySelectorAll('.decay-card').forEach(c=>c.classList.remove('active'));card.classList.add('active');closeModal('decayModal');triggerRegen();});grid.appendChild(card);});}
+document.getElementById('btnCloseDecay').addEventListener('click',()=>closeModal('decayModal'));
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+['elModal','cmpModal','decayModal'].forEach(id=>{document.getElementById(id).addEventListener('click',e=>{if(e.target===document.getElementById(id))closeModal(id);});});
+
+function renderU238Chain(){
+  const panel=document.getElementById('u238Panel');panel.classList.add('open');
+  const c=document.getElementById('u238Canvas');const ctx=c.getContext('2d');
+  function draw(){c.width=panel.clientWidth*(devicePixelRatio||1);c.height=panel.clientHeight*(devicePixelRatio||1);ctx.scale(devicePixelRatio||1,devicePixelRatio||1);const W=panel.clientWidth,H=panel.clientHeight;ctx.fillStyle='#060810';ctx.fillRect(0,0,W,H);ctx.fillStyle='#ffb74d';ctx.font='bold 13px Share Tech Mono, monospace';ctx.textAlign='center';ctx.fillText('²³⁸U → ²⁰⁶Pb Decay Chain (NNDC/AME2020)',W/2,22);const chain=U238_CHAIN,n=chain.length;const padX=40,padY=50,W2=W-padX*2,H2=H-padY*2;const cols=Math.min(4,Math.ceil(n/4)),rows=Math.ceil(n/cols);const cw=W2/cols,ch=H2/rows;const positions=chain.map((_,i)=>({x:padX+(i%cols)*cw+cw/2,y:padY+Math.floor(i/cols)*ch+ch/2}));for(let i=0;i<positions.length-1;i++){const p0=positions[i],p1=positions[i+1],s=chain[i];ctx.strokeStyle=s.mode==='α'?'rgba(255,110,64,0.5)':'rgba(79,195,247,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.lineTo(p1.x,p1.y);ctx.stroke();ctx.setLineDash([]);}chain.forEach((step,i)=>{const{x,y}=positions[i];const isStable=step.mode==='—';const rx=Math.min(cw*0.44,42),ry=Math.min(ch*0.38,22);ctx.strokeStyle=step.color;ctx.lineWidth=1.5;ctx.fillStyle=isStable?'rgba(50,100,50,0.1)':'rgba(16,18,30,0.9)';ctx.fillRect(x-rx,y-ry,rx*2,ry*2);ctx.strokeRect(x-rx,y-ry,rx*2,ry*2);ctx.fillStyle=step.color;ctx.font=`bold ${Math.min(12,cw*0.12)}px Share Tech Mono, monospace`;ctx.textAlign='center';ctx.fillText(step.iso,x,y-4);ctx.fillStyle='#7888aa';ctx.font=`${Math.min(8,cw*0.07)}px Share Tech Mono, monospace`;ctx.fillText('t½: '+step.t.slice(0,12),x,y+7);ctx.fillStyle=isStable?'#66bb6a':step.mode==='α'?'#ff6e40':'#4fc3f7';ctx.font=`bold ${Math.min(9,cw*0.08)}px Share Tech Mono, monospace`;ctx.fillText(isStable?'STABLE':step.mode,x,y+18);});let hovered=null;function onMove(e){const rect=c.getBoundingClientRect();const ex=e.touches?e.touches[0].clientX:e.clientX;const ey=e.touches?e.touches[0].clientY:e.clientY;const mx=(ex-rect.left),my=(ey-rect.top);let found=null;positions.forEach(({x,y},i)=>{const rx2=Math.min(cw*0.44,42),ry2=Math.min(ch*0.38,22);if(Math.abs(mx-x)<rx2&&Math.abs(my-y)<ry2)found=i;});if(found!==hovered){hovered=found;ctx.fillStyle='rgba(6,8,16,0.95)';ctx.fillRect(0,H-36,W,36);if(found!==null){const s=chain[found];ctx.fillStyle=s.color;ctx.font='11px Share Tech Mono, monospace';ctx.textAlign='left';ctx.fillText(s.iso+' · Z='+s.Z+' A='+s.A+' · t½: '+s.t,14,H-18);ctx.fillStyle='#5a6480';ctx.font='8px Share Tech Mono, monospace';ctx.fillText(s.desc,14,H-6);}}}
+  c.onmousemove=c.ontouchmove=onMove;}
+  draw();document.getElementById('u238Close').addEventListener('click',()=>document.getElementById('u238Panel').classList.remove('open'));window.addEventListener('resize',()=>{if(document.getElementById('u238Panel').classList.contains('open'))draw();});
+}
+document.getElementById('u238Close').addEventListener('click',()=>document.getElementById('u238Panel').classList.remove('open'));
+
+let nuclideData=null,nuclideHighlightZ=null,nuclideBounds=null;
+const AME2020_STABLE=new Set(['1-0','1-1','2-1','2-2','3-3','3-4','4-5','5-5','5-6','6-6','6-7','7-7','7-8','8-8','8-9','8-10','9-10','10-10','10-11','10-12','11-12','12-12','12-13','12-14','13-14','14-14','14-15','14-16','15-16','16-16','16-17','16-18','16-20','17-18','17-20','18-18','18-20','18-22','19-20','19-21','19-22','20-20','20-22','20-23','20-24','20-26','20-28','21-24','22-24','22-25','22-26','22-27','22-28','23-28','24-26','24-28','24-29','24-30','25-30','26-28','26-30','26-31','26-32','27-32','28-30','28-32','28-33','28-34','28-36','29-34','29-36','30-34','30-36','30-37','30-38','30-40','31-38','31-40','32-38','32-40','32-41','32-42','32-44','33-42','34-40','34-42','34-43','34-44','34-46','34-48','35-44','35-46','36-44','36-46','36-47','36-48','36-50','37-48','37-50','38-46','38-48','38-49','38-50','38-52','39-50','40-50','40-51','40-52','40-53','40-54','41-52','41-54','42-52','42-54','42-55','42-56','42-58','44-52','44-54','44-55','44-56','44-57','44-58','44-60','45-58','46-56','46-58','46-60','46-62','46-64','47-60','47-62','48-58','48-60','48-62','48-63','48-64','48-66','49-64','49-66','50-62','50-64','50-65','50-66','50-67','50-68','50-70','51-70','51-72','52-68','52-70','52-71','52-72','52-74','52-76','53-74','54-70','54-72','54-74','54-75','54-76','54-78','54-80','55-78','56-74','56-76','56-78','56-79','56-80','56-82','57-82','58-78','58-80','58-82','58-84','59-82','60-82','60-83','60-84','60-86','62-82','62-84','62-85','62-86','62-88','63-88','63-90','64-88','64-90','64-91','64-92','64-94','65-94','66-90','66-92','66-94','66-95','66-96','67-98','68-94','68-96','68-97','68-98','68-100','69-100','70-98','70-100','70-101','70-102','70-104','71-104','72-104','72-106','72-107','72-108','72-110','73-108','74-106','74-108','74-110','74-112','75-110','75-112','76-110','76-112','76-113','76-114','76-116','77-114','77-116','78-112','78-114','78-116','78-117','78-118','79-118','80-116','80-118','80-119','80-120','80-122','81-122','81-124','82-122','82-124','82-125','82-126','83-126','90-142','92-142','92-143','92-146']);
+
+function generateNuclideData(){if(nuclideData)return;nuclideData=[];for(let Z=1;Z<=92;Z++){const el=ELEMENTS.find(e=>e.z===Z)||{sym:'?',name:'Unknown'};const Nstab=Z<=20?Z:Math.round(Z+(Z-20)*0.45);const Nmin=Math.max(0,Nstab-Math.min(11,Z));const Nmax=Nstab+Math.min(14,Z+4);for(let N=Nmin;N<=Nmax;N++){const key=`${Z}-${N}`;const isStable=AME2020_STABLE.has(key);const dN=N-Nstab;let mode,color;if(isStable){mode='stable';color='#cccccc';}else if(dN<-2){mode='β⁺/EC';color='#ef5350';}else if(dN<0){mode='β⁺/EC';color='#ff8a65';}else if(dN<2){mode='β⁻';color='#42a5f5';}else if(dN<5){mode='β⁻';color='#1565c0';}else{mode='β⁻';color='#0d47a1';}if(Z>83&&!isStable){mode='α';color='#ffd54f';}if(Z>92){mode='fission';color='#ce93d8';}nuclideData.push({Z,N,A:Z+N,sym:el.sym,name:el.name,mode,color,stable:isStable});}}}
+
+function renderNuclideMap(){
+  generateNuclideData();const panel=document.getElementById('nuclidePanel');panel.classList.add('open');
+  const c=document.getElementById('nuclideCanvas');const ctx=c.getContext('2d');const dpr=devicePixelRatio||1;
+  function draw(hlZ){const cssW=c.clientWidth,cssH=c.clientHeight;c.width=Math.round(cssW*dpr);c.height=Math.round(cssH*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#060810';ctx.fillRect(0,0,cssW,cssH);ctx.fillStyle='#4fc3f7';ctx.font='bold 11px Share Tech Mono, monospace';ctx.textAlign='center';ctx.fillText('Chart of Nuclides — N-Z Plane (AME2020)',cssW/2,16);const padL=36,padR=12,padT=28,padB=52;const plotW=cssW-padL-padR,plotH=cssH-padT-padB;const maxN=155,maxZ=95;const cellW=plotW/maxN,cellH=plotH/maxZ;nuclideBounds={padL,padT,plotW,plotH,maxN,maxZ,cellW,cellH,cssW,cssH};ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=0.5;for(let N=0;N<=maxN;N+=20){ctx.beginPath();ctx.moveTo(padL+N*cellW,padT);ctx.lineTo(padL+N*cellW,padT+plotH);ctx.stroke();}for(let Z=0;Z<=maxZ;Z+=10){ctx.beginPath();ctx.moveTo(padL,padT+plotH-Z*cellH);ctx.lineTo(padL+plotW,padT+plotH-Z*cellH);ctx.stroke();}nuclideData.forEach(nd=>{if(nd.N>maxN||nd.Z>maxZ)return;const x=padL+nd.N*cellW;const y=padT+plotH-nd.Z*cellH;const hl=hlZ&&nd.Z===hlZ;ctx.fillStyle=hl?'#ffffff':nd.color;const sz=Math.max(1.0,Math.min(cellW*0.88,cellH*0.88));ctx.fillRect(x-sz/2,y-sz/2,sz,sz);});ctx.fillStyle='#5a6480';ctx.font='8px Share Tech Mono, monospace';ctx.textAlign='center';for(let N=0;N<=maxN;N+=20)ctx.fillText(N,padL+N*cellW,padT+plotH+12);ctx.textAlign='right';for(let Z=0;Z<=maxZ;Z+=10)ctx.fillText(Z,padL-3,padT+plotH-Z*cellH+3);ctx.fillStyle='#4fc3f7';ctx.textAlign='center';ctx.fillText('N (neutrons)',padL+plotW/2,padT+plotH+24);const items=[{c:'#cccccc',l:'Stable'},{c:'#ff8a65',l:'β⁺/EC'},{c:'#42a5f5',l:'β⁻'},{c:'#ffd54f',l:'α'}];items.forEach((li,i)=>{const lx=4+i*70;ctx.fillStyle=li.c;ctx.fillRect(lx,padT+plotH+32,8,8);ctx.fillStyle='#7888aa';ctx.font='7px Share Tech Mono, monospace';ctx.textAlign='left';ctx.fillText(li.l,lx+10,padT+plotH+39);});}
+  function hitTest(mx,my){if(!nuclideBounds)return null;const{padL,padT,plotH,cellW,cellH,maxN,maxZ}=nuclideBounds;if(mx<padL||mx>padL+nuclideBounds.plotW)return null;if(my<padT||my>padT+plotH)return null;const N=Math.round((mx-padL)/cellW);const Z=Math.round((padT+plotH-my)/cellH);if(N<0||N>maxN||Z<0||Z>maxZ)return null;return nuclideData.find(d=>d.N===N&&d.Z===Z)||null;}
+  function getCanvasCSSpx(e){const rect=c.getBoundingClientRect();const ex=e.touches?e.touches[0].clientX:e.clientX;const ey=e.touches?e.touches[0].clientY:e.clientY;return{mx:ex-rect.left,my:ey-rect.top};}
+  function setNuclideInfo(nd){if(nd){document.getElementById('nuclideInfoMain').textContent=`${nd.sym}-${nd.A} (Z=${nd.Z}, N=${nd.N}) · ${nd.name} · ${nd.stable?'STABLE · ':''}Decay: ${nd.mode} · Mass number A=${nd.A}`;document.getElementById('nuclideInfoSub').textContent=nd.stable?`Stable nuclide · Half-life: infinite · AME2020/NUBASE2020`:`Radioactive · Mode: ${nd.mode} · Proton-rich: ${nd.N<nd.Z?'yes':'no'} · AME2020/NUBASE2020`;}else{document.getElementById('nuclideInfoMain').textContent='Hover over a nuclide to see details · Click to highlight element';document.getElementById('nuclideInfoSub').textContent='AME2020/NUBASE2020 · N=neutrons (x-axis) · Z=protons (y-axis)';}}
+  function handleMove(e){e.preventDefault();const{mx,my}=getCanvasCSSpx(e);const nd=hitTest(mx,my);setNuclideInfo(nd);}
+  function handleClick(e){const{mx,my}=getCanvasCSSpx(e);const nd=hitTest(mx,my);if(nd){nuclideHighlightZ=nd.Z===nuclideHighlightZ?null:nd.Z;document.getElementById('nuclideHighlight').textContent=nuclideHighlightZ?`${nd.sym} hl`:'';draw(nuclideHighlightZ);setNuclideInfo(nd);}}
+  c.onmousemove=null;c.ontouchmove=null;c.onclick=null;c.ontouchend=null;
+  c.addEventListener('mousemove',handleMove);c.addEventListener('touchmove',handleMove,{passive:false});c.addEventListener('click',handleClick);
+  c.addEventListener('touchend',e=>{e.preventDefault();const rect=c.getBoundingClientRect();const touch=e.changedTouches[0];const mx=touch.clientX-rect.left,my=touch.clientY-rect.top;const nd=hitTest(mx,my);if(nd){nuclideHighlightZ=nd.Z===nuclideHighlightZ?null:nd.Z;document.getElementById('nuclideHighlight').textContent=nuclideHighlightZ?`${nd.sym} hl`:'';draw(nuclideHighlightZ);}setNuclideInfo(nd);},{passive:false});
+  document.getElementById('nuclideSearch').oninput=function(e){const v=e.target.value.trim();const el=ELEMENTS.find(x=>x.sym.toLowerCase()===v.toLowerCase()||x.name.toLowerCase()===v.toLowerCase());nuclideHighlightZ=el?el.z:null;document.getElementById('nuclideHighlight').textContent=el?`${el.sym} hl`:'';draw(nuclideHighlightZ);setNuclideInfo(null);};
+  draw(nuclideHighlightZ);setNuclideInfo(null);
+  function onResize(){if(document.getElementById('nuclidePanel').classList.contains('open'))draw(nuclideHighlightZ);}
+  window.addEventListener('resize',onResize);
+}
+document.getElementById('nuclideClose').addEventListener('click',()=>{document.getElementById('nuclidePanel').classList.remove('open');document.getElementById('nuclideSearch').value='';nuclideHighlightZ=null;nuclideBounds=null;document.getElementById('nuclideInfoMain').textContent='Hover over a nuclide to see details · Click to highlight element · AME2020/NUBASE2020';document.getElementById('nuclideInfoSub').textContent='';});
+</script>
+</body>
+</html>
